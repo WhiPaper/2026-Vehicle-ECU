@@ -1,0 +1,38 @@
+{
+    "name": "ESP-IDF QEMU",
+    "build": {
+        "dockerfile": "Dockerfile"
+    },
+    "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+    "remoteEnv": {
+        "LANG": "C.UTF-8",
+        "LC_ALL": "C.UTF-8"
+    },
+    "customizations": {
+        "vscode": {
+            "settings": {
+                "editor.formatOnSave": true,
+                "terminal.integrated.defaultProfile.linux": "bash",
+                "idf.gitPath": "/usr/bin/git",
+                "[c]": {
+                    "editor.defaultFormatter": "xaver.clang-format"
+                },
+                "[cpp]": {
+                    "editor.defaultFormatter": "xaver.clang-format"
+                }
+            },
+            "extensions": [
+                "espressif.esp-idf-extension",
+                "espressif.esp-idf-web",
+                "xaver.clang-format",
+                "ms-vscode.cmake-tools",
+                "llvm-vs-code-extensions.vscode-clangd",
+                "EditorConfig.EditorConfig"
+            ]
+        }
+    },
+    "postCreateCommand": "python -m pip install --upgrade pip pre-commit && pre-commit install",
+    "runArgs": [
+        "--privileged"
+    ]
+}
