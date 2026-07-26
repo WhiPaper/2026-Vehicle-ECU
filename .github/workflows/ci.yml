@@ -5,47 +5,259 @@ on:
     branches:
       - main
       - develop
+    tags:
+      - "v*"
   pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  devcontainer:
-    name: Devcontainer clean build
+  formatting:
+    name: Formatting
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/checkout@v6
 
-      - name: Build devcontainer image
-        run: docker build --tag vehicle-ecu-dev --file .devcontainer/Dockerfile .
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
 
-      - name: Verify tools, formatting, and clean project build
+      - name: Restore Python tool caches
+        id: formatting-cache
+        uses: actions/cache/restore@v5
+        with:
+          path: |
+            ~/.cache/pip
+            ~/.cache/pre-commit
+          key: formatting-${{ runner.os }}-${{ hashFiles('requirements-dev.txt', '.pre-commit-config.yaml') }}
+
+      - name: Install pre-commit
         run: |
-          docker run --rm \
-            --volume "${GITHUB_WORKSPACE}:/project" \
-            --workdir /project \
-            vehicle-ecu-dev \
-            bash -lc '
-              set -euo pipefail
-              git config --global --add safe.directory /project
-              test "$(git -C /opt/esp/idf rev-parse HEAD)" = \
-                "102122904ade11fd1ae373848f34ffd7dfb18aeb"
-              python -m pip check
-              pre-commit run --all-files
+          python -m pip install --disable-pip-version-check \
+            --constraint requirements-dev.txt \
+            pre-commit==4.6.1
+          python -m pip check
 
-              build_project() {
-                (
-                  cd "$1"
-                  idf.py set-target esp32
-                  idf.py build
-                )
-              }
+      - name: Check formatting
+        run: pre-commit run --all-files
 
-              build_project .
-              build_project components/motor/test_apps/unit
-              build_project components/drive/test_apps/unit
-              build_project components/motor/test_apps/hardware
+      - name: Save Python tool caches
+        if: >-
+          github.event_name != 'pull_request' &&
+          steps.formatting-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: |
+            ~/.cache/pip
+            ~/.cache/pre-commit
+          key: ${{ steps.formatting-cache.outputs.cache-primary-key }}
 
-              git diff --exit-code -- \
-                dependencies.lock \
-                components/drive/test_apps/unit/dependencies.lock \
-                components/motor/test_apps/hardware/dependencies.lock
-            '
+  build:
+    name: Build (${{ matrix.name }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    container:
+      image: espressif/idf:v6.0.2
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: firmware
+            path: .
+            cache_key: firmware
+            component_cache: true
+            micro_ros: true
+          - name: motor unit
+            path: components/motor/test_apps/unit
+            cache_key: motor-unit
+            qemu_test: true
+            test_file: test_motor.py
+          - name: drive unit
+            path: components/drive/test_apps/unit
+            cache_key: drive-unit
+            component_cache: true
+            qemu_test: true
+            test_file: test_drive.py
+          - name: ros_bridge unit
+            path: components/ros_bridge/test_apps/unit
+            cache_key: ros-bridge-unit
+            component_cache: true
+            micro_ros: true
+            qemu_test: true
+            test_file: test_ros_bridge.py
+          - name: motor hardware
+            path: components/motor/test_apps/hardware
+            cache_key: motor-hardware
+            component_cache: true
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Restore build caches
+        id: build-cache
+        uses: actions/cache/restore@v5
+        with:
+          path: |
+            /root/.cache/ccache
+            /root/.cache/pip
+          key: idf-v6.0.2-${{ matrix.cache_key }}-${{ github.sha }}
+          restore-keys: |
+            idf-v6.0.2-${{ matrix.cache_key }}-
+
+      - name: Restore managed components
+        if: matrix.component_cache
+        id: component-cache
+        uses: actions/cache/restore@v5
+        with:
+          path: ${{ matrix.path }}/managed_components
+          key: idf-components-v6.0.2-${{ matrix.cache_key }}-${{ hashFiles('**/dependencies.lock', 'app-colcon.meta', 'requirements-microros.txt', '**/sdkconfig.defaults', '**/CMakeLists.txt', '**/idf_component.yml') }}
+
+      - name: Install micro-ROS build dependencies
+        if: matrix.micro_ros
+        shell: bash
+        run: |
+          source /opt/esp/idf/export.sh
+          python -m pip install --disable-pip-version-check \
+            --requirement requirements-microros.txt
+          python -m pip check
+
+      - name: Install QEMU test dependencies
+        if: matrix.qemu_test
+        shell: bash
+        run: |
+          source /opt/esp/idf/export.sh
+          python -m pip install --disable-pip-version-check \
+            --requirement requirements-test.txt
+          python -m pip check
+
+      - name: Build
+        shell: bash
+        working-directory: ${{ matrix.path }}
+        run: |
+          set -euo pipefail
+          source /opt/esp/idf/export.sh
+
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          test "$(git -C /opt/esp/idf rev-parse HEAD)" = \
+            "102122904ade11fd1ae373848f34ffd7dfb18aeb"
+
+          ccache --max-size=500M
+          idf.py set-target esp32
+          idf.py build
+
+          git -C "$GITHUB_WORKSPACE" diff --exit-code -- \
+            ":(glob)**/dependencies.lock"
+
+      - name: Run Unity tests in QEMU
+        if: matrix.qemu_test
+        shell: bash
+        working-directory: ${{ matrix.path }}
+        run: |
+          source /opt/esp/idf/export.sh
+          pytest \
+            -p no:repeat \
+            --embedded-services idf,qemu \
+            --junitxml=pytest-results.xml \
+            -o junit_family=legacy \
+            --no-header \
+            --verbose \
+            "${{ matrix.test_file }}"
+
+      - name: Upload test results
+        if: always() && matrix.qemu_test
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results-${{ matrix.cache_key }}
+          if-no-files-found: ignore
+          retention-days: 7
+          path: ${{ matrix.path }}/pytest-results.xml
+
+      - name: Save build caches
+        if: >-
+          github.event_name != 'pull_request' &&
+          steps.build-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: |
+            /root/.cache/ccache
+            /root/.cache/pip
+          key: ${{ steps.build-cache.outputs.cache-primary-key }}
+
+      - name: Save managed components
+        if: >-
+          matrix.component_cache &&
+          github.event_name != 'pull_request' &&
+          steps.component-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: ${{ matrix.path }}/managed_components
+          key: ${{ steps.component-cache.outputs.cache-primary-key }}
+
+      - name: Upload release firmware files
+        if: matrix.cache_key == 'firmware' && startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-artifact@v7
+        with:
+          name: vehicle-ecu-files-${{ github.ref_name }}
+          if-no-files-found: error
+          retention-days: 7
+          path: |
+            build/vehicle_ecu.bin
+            build/vehicle_ecu.elf
+            build/vehicle_ecu.map
+            build/bootloader/bootloader.bin
+            build/partition_table/partition-table.bin
+            build/flash_args
+            build/flasher_args.json
+
+  release-artifact:
+    name: Package release artifact
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs:
+      - formatting
+      - build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      attestations: write
+      contents: read
+      id-token: write
+    steps:
+      - name: Download firmware files
+        uses: actions/download-artifact@v7
+        with:
+          name: vehicle-ecu-files-${{ github.ref_name }}
+          path: firmware
+
+      - name: Package firmware
+        env:
+          RELEASE_ARCHIVE: vehicle-ecu-${{ github.ref_name }}.tar.gz
+        run: |
+          tar \
+            --create \
+            --gzip \
+            --file "$RELEASE_ARCHIVE" \
+            --directory firmware \
+            .
+          sha256sum "$RELEASE_ARCHIVE" > "$RELEASE_ARCHIVE.sha256"
+
+      - name: Attest firmware provenance
+        uses: actions/attest@v4
+        with:
+          subject-path: vehicle-ecu-${{ github.ref_name }}.tar.gz
+
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: vehicle-ecu-${{ github.ref_name }}
+          if-no-files-found: error
+          retention-days: 7
+          path: |
+            vehicle-ecu-${{ github.ref_name }}.tar.gz
+            vehicle-ecu-${{ github.ref_name }}.tar.gz.sha256

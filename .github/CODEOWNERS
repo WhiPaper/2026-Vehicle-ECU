@@ -1,0 +1,4 @@
+# Require repository-owner review for automation and release changes.
+/.github/workflows/ @WhiPaper
+/.github/dependabot.yml @WhiPaper
+/requirements-*.txt @WhiPaper

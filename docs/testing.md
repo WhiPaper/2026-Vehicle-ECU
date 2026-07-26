@@ -6,13 +6,21 @@
 
 ## CI와 로컬 기본 검증
 
-CI는 고정된 devcontainer에서 다음 항목을 확인한다.
+CI는 Ubuntu formatting job과 `espressif/idf:v6.0.2` build matrix에서 다음
+항목을 확인한다.
 
-- Python 의존성 무결성과 pre-commit 검사
+- pre-commit 검사
 - 루트 펌웨어의 clean build
-- `motor`, `drive` 단위 시험 애플리케이션 build
+- `motor`, `drive`, `ros_bridge` 단위 시험 애플리케이션 build
+- QEMU에서 세 단위 시험 애플리케이션의 Unity test case 실행
 - 모터 하드웨어 시험 애플리케이션 build
 - Component Manager lock file이 빌드 후 바뀌지 않는지 확인
+
+`v*` 태그에서는 모든 CI 검증이 성공한 뒤 루트 펌웨어의 flash 파일, ELF와
+map 파일을 GitHub Release archive로 발행한다. Archive에는 SHA-256 checksum과
+GitHub artifact attestation을 함께 제공한다. 모터 하드웨어 시험은 안전상
+GitHub-hosted runner에서 실행하지 않고 아래 절차에 따라 실제 차량에서
+수동으로 수행한다.
 
 로컬 변경의 최소 검증:
 

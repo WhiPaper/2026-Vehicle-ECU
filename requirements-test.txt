@@ -1,0 +1,6 @@
+-c requirements-dev.txt
+
+# ESP-IDF Unity execution on Espressif QEMU.
+pytest-embedded==2.8.1
+pytest-embedded-idf==2.8.1
+pytest-embedded-qemu==2.8.1

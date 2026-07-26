@@ -1,0 +1,76 @@
+name: Release firmware
+
+on:
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
+
+permissions: {}
+
+jobs:
+  release:
+    name: Publish GitHub release
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      startsWith(github.event.workflow_run.head_branch, 'v')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: release
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - name: Validate release source
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
+          RELEASE_TAG: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          set -euo pipefail
+
+          tag_sha="$(
+            gh api \
+              "repos/$GITHUB_REPOSITORY/commits/$RELEASE_TAG" \
+              --jq .sha
+          )"
+          test "$tag_sha" = "$RELEASE_SHA"
+
+          comparison_status="$(
+            gh api \
+              "repos/$GITHUB_REPOSITORY/compare/$RELEASE_SHA...$DEFAULT_BRANCH" \
+              --jq .status
+          )"
+          test "$comparison_status" = "ahead" ||
+            test "$comparison_status" = "identical"
+
+      - name: Download firmware
+        uses: actions/download-artifact@v7
+        with:
+          name: vehicle-ecu-${{ github.event.workflow_run.head_branch }}
+          path: firmware
+          github-token: ${{ github.token }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_ARCHIVE: firmware/vehicle-ecu-${{ github.event.workflow_run.head_branch }}.tar.gz
+          RELEASE_TAG: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          if gh release view "$RELEASE_TAG" > /dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" \
+              "$RELEASE_ARCHIVE" \
+              "$RELEASE_ARCHIVE.sha256" \
+              --clobber
+          else
+            gh release create "$RELEASE_TAG" \
+              "$RELEASE_ARCHIVE" \
+              "$RELEASE_ARCHIVE.sha256" \
+              --generate-notes \
+              --title "$RELEASE_TAG" \
+              --verify-tag
+          fi
