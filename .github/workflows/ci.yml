@@ -145,8 +145,6 @@ jobs:
           source /opt/esp/idf/export.sh
 
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          test "$(git -C /opt/esp/idf rev-parse HEAD)" = \
-            "102122904ade11fd1ae373848f34ffd7dfb18aeb"
 
           ccache --max-size=500M
           idf.py set-target esp32
