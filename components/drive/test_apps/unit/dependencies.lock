@@ -64,7 +64,7 @@ dependencies:
   idf:
     source:
       type: idf
-    version: 6.2.0
+    version: 6.0.2
   tny-robotics/mpu6050-esp-idf:
     component_hash: 4b4236633c84283401ef809fab7d6375e6998aeb3744758bb2d93c3a490544c9
     dependencies: []

@@ -64,7 +64,7 @@ dependencies:
   idf:
     source:
       type: idf
-    version: 6.2.0
+    version: 6.0.2
   micro_ros:
     component_hash: 886e2a0dc560f070b17ef2dbbce7cf1582c7c576b87f5e3688648629d6e1c6c2
     dependencies:

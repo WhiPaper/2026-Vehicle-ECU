@@ -12,7 +12,7 @@ dependencies:
   idf:
     source:
       type: idf
-    version: 6.2.0
+    version: 6.0.2
 direct_dependencies:
 - espressif/bdc_motor
 manifest_hash: 13fa501135257847a1baf7adf4b31bb267e536083b6a1fb7c20bab7740df7d14
