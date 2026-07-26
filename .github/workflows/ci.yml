@@ -27,7 +27,7 @@ jobs:
               set -euo pipefail
               git config --global --add safe.directory /project
               test "$(git -C /opt/esp/idf rev-parse HEAD)" = \
-                "102122904ade11fd1ae373848f34ffd7dfb18aeb"
+                "7101770dc6db2667b3c477cc31365dd1acd6db4e"
               python -m pip check
               pre-commit run --all-files
 
