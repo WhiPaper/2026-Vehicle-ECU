@@ -1,0 +1,81 @@
+dependencies:
+  espp/base_component:
+    component_hash: 20699baa1c55a370c94e706b389e11c92be8677dab401f74e1617a3ec0375569
+    dependencies:
+    - name: espp/logger
+      registry_url: https://components.espressif.com
+      require: private
+      version: '>=1.0'
+    - name: idf
+      require: private
+      version: '>=5.0'
+    source:
+      registry_url: https://components.espressif.com
+      type: service
+    version: 1.1.6
+  espp/encoder:
+    component_hash: 75136aafa5ba2fdfd6cf73b578410feaf3e501d4a791910ec4e7c8b6b970460d
+    dependencies:
+    - name: espp/base_component
+      registry_url: https://components.espressif.com
+      require: private
+      version: '>=1.0'
+    - name: idf
+      require: private
+      version: '>=5.0'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 1.1.6
+  espp/format:
+    component_hash: d506a9792ce7fe084c90f017f25b0bdaba21ddd818cf8cbf832aa0ea11a14b68
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=5.0'
+    source:
+      registry_url: https://components.espressif.com
+      type: service
+    version: 1.1.6
+  espp/logger:
+    component_hash: 1519eb5330b436465d4a5dd21734c92505716df952feb21fdaece95282c21431
+    dependencies:
+    - name: espp/format
+      registry_url: https://components.espressif.com
+      require: private
+      version: '>=1.0'
+    - name: idf
+      require: private
+      version: '>=5.0'
+    source:
+      registry_url: https://components.espressif.com
+      type: service
+    version: 1.1.6
+  espressif/bdc_motor:
+    component_hash: 4165d3711efeab02dfe120716a0c10f9a838bd935e7230efa5f614976217b2eb
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=5.0'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 0.2.1
+  idf:
+    source:
+      type: idf
+    version: 6.2.0
+  tny-robotics/mpu6050-esp-idf:
+    component_hash: 4b4236633c84283401ef809fab7d6375e6998aeb3744758bb2d93c3a490544c9
+    dependencies: []
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    version: 1.1.0
+direct_dependencies:
+- espp/encoder
+- espressif/bdc_motor
+- tny-robotics/mpu6050-esp-idf
+manifest_hash: 87945fedeeffb21d432977428d010fa9745e64d1b86014d30adb65b006fc5a82
+target: esp32
+version: 3.0.0

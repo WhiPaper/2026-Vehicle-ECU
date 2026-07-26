@@ -1,0 +1,123 @@
+menu "Board"
+
+    config MOTOR_FRONT_LEFT_IA_GPIO
+        int "Front-left IA GPIO"
+        range 0 33
+
+    config MOTOR_FRONT_LEFT_IB_GPIO
+        int "Front-left IB GPIO"
+        range 0 33
+
+    config MOTOR_FRONT_LEFT_INVERTED
+        bool "Invert front-left motor direction"
+        default n
+
+    config MOTOR_FRONT_RIGHT_IA_GPIO
+        int "Front-right IA GPIO"
+        range 0 33
+
+    config MOTOR_FRONT_RIGHT_IB_GPIO
+        int "Front-right IB GPIO"
+        range 0 33
+
+    config MOTOR_FRONT_RIGHT_INVERTED
+        bool "Invert front-right motor direction"
+        default y
+
+    config MOTOR_REAR_LEFT_IA_GPIO
+        int "Rear-left IA GPIO"
+        range 0 33
+
+    config MOTOR_REAR_LEFT_IB_GPIO
+        int "Rear-left IB GPIO"
+        range 0 33
+
+    config MOTOR_REAR_LEFT_INVERTED
+        bool "Invert rear-left motor direction"
+        default n
+
+    config MOTOR_REAR_RIGHT_IA_GPIO
+        int "Rear-right IA GPIO"
+        range 0 33
+
+    config MOTOR_REAR_RIGHT_IB_GPIO
+        int "Rear-right IB GPIO"
+        range 0 33
+
+    config MOTOR_REAR_RIGHT_INVERTED
+        bool "Invert rear-right motor direction"
+        default y
+
+    config ENCODER_LEFT_A_GPIO
+        int "Left encoder A GPIO"
+        range 0 39
+
+    config ENCODER_LEFT_B_GPIO
+        int "Left encoder B GPIO"
+        range 0 39
+
+    config ENCODER_LEFT_INVERTED
+        bool "Invert left encoder direction"
+        default n
+
+    config ENCODER_RIGHT_A_GPIO
+        int "Right encoder A GPIO"
+        range 0 39
+
+    config ENCODER_RIGHT_B_GPIO
+        int "Right encoder B GPIO"
+        range 0 39
+
+    config ENCODER_RIGHT_INVERTED
+        bool "Invert right encoder direction"
+        default y
+
+    config ENCODER_CPR
+        int "Encoder counts per wheel revolution after quadrature"
+        range 0 1000000
+        default 0
+        help
+            Four-times quadrature counts for one wheel revolution, including
+            gearbox ratio. Zero keeps closed-loop driving disabled.
+
+    config ENCODER_GLITCH_FILTER_NS
+        int "Encoder glitch filter (ns)"
+        range 0 100000
+        default 1000
+
+    config MPU6050_SDA_GPIO
+        int "MPU6050 SDA GPIO"
+        range 0 39
+
+    config MPU6050_SCL_GPIO
+        int "MPU6050 SCL GPIO"
+        range 0 39
+
+    config MPU6050_I2C_ADDRESS
+        hex "MPU6050 I2C address"
+        range 0x68 0x69
+        default 0x68
+
+    config MPU6050_CALIBRATION_RATE_HZ
+        int "MPU6050 stationary calibration rate (Hz)"
+        range 10 1000
+        default 100
+        help
+            Sampling interval used while calculating the startup bias. The
+            Registry driver currently leaves the sensor output-data rate at
+            its hardware configuration.
+
+    config MPU6050_CALIBRATION_SAMPLES
+        int "Stationary calibration samples"
+        range 0 2000
+        default 200
+
+    config MOTOR_PWM_FREQUENCY_HZ
+        int "Motor PWM frequency (Hz)"
+        range 1000 40000
+        default 20000
+        help
+            Keep 20000 Hz for normal operation. Set this to 1000 Hz temporarily
+            when diagnosing motor startup or PWM waveform issues.
+
+endmenu

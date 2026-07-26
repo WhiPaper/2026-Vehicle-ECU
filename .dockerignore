@@ -1,0 +1,8 @@
+.git
+.cache
+.vscode
+**/__pycache__
+**/build
+**/managed_components
+**/sdkconfig
+**/sdkconfig.old

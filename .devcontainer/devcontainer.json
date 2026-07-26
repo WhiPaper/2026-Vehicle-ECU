@@ -1,9 +1,13 @@
 {
     "name": "ESP-IDF QEMU",
     "build": {
-        "dockerfile": "Dockerfile"
+        "dockerfile": "Dockerfile",
+        "context": ".."
     },
     "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
+    "remoteUser": "dev",
+    "containerUser": "dev",
+    "updateRemoteUserUID": true,
     "remoteEnv": {
         "LANG": "C.UTF-8",
         "LC_ALL": "C.UTF-8"
@@ -14,6 +18,10 @@
                 "editor.formatOnSave": true,
                 "terminal.integrated.defaultProfile.linux": "bash",
                 "idf.gitPath": "/usr/bin/git",
+                "clangd.arguments": [
+                    "--compile-commands-dir=${workspaceFolder}/build",
+                    "--query-driver=/opt/esp/tools/**/bin/*"
+                ],
                 "[c]": {
                     "editor.defaultFormatter": "xaver.clang-format"
                 },
@@ -31,7 +39,7 @@
             ]
         }
     },
-    "postCreateCommand": "python -m pip install --upgrade pip pre-commit && pre-commit install",
+    "postCreateCommand": "git config --global --get-all safe.directory | grep -qxF /workspaces/${localWorkspaceFolderBasename} || git config --global --add safe.directory /workspaces/${localWorkspaceFolderBasename} && pre-commit install && idf.py reconfigure",
     "runArgs": [
         "--privileged"
     ]

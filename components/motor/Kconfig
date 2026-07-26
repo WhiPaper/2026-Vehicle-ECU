@@ -1,0 +1,21 @@
+menu "Motor control"
+
+    config MOTOR_START_BOOST_SPEED
+        int "Startup boost command"
+        range 0 1000
+        default 800
+        help
+            Command magnitude applied briefly when a stopped motor receives a
+            lower non-zero command, or when it reverses direction. Set to 0 to
+            disable startup boost.
+
+    config MOTOR_START_BOOST_DURATION_MS
+        int "Startup boost duration (ms)"
+        range 1 1000
+        default 100
+        depends on MOTOR_START_BOOST_SPEED > 0
+        help
+            Time to hold the startup boost before returning to the requested
+            command.
+
+endmenu

@@ -1,0 +1,64 @@
+menu "Motor hardware test pins"
+
+    config MOTOR_FRONT_LEFT_IA_GPIO
+        int "Front-left IA GPIO"
+        range 0 33
+        default 25
+
+    config MOTOR_FRONT_LEFT_IB_GPIO
+        int "Front-left IB GPIO"
+        range 0 33
+        default 26
+
+    config MOTOR_FRONT_LEFT_INVERTED
+        bool "Invert front-left motor direction"
+        default n
+
+    config MOTOR_FRONT_RIGHT_IA_GPIO
+        int "Front-right IA GPIO"
+        range 0 33
+        default 27
+
+    config MOTOR_FRONT_RIGHT_IB_GPIO
+        int "Front-right IB GPIO"
+        range 0 33
+        default 14
+
+    config MOTOR_FRONT_RIGHT_INVERTED
+        bool "Invert front-right motor direction"
+        default y
+
+    config MOTOR_REAR_LEFT_IA_GPIO
+        int "Rear-left IA GPIO"
+        range 0 33
+        default 19
+
+    config MOTOR_REAR_LEFT_IB_GPIO
+        int "Rear-left IB GPIO"
+        range 0 33
+        default 18
+
+    config MOTOR_REAR_LEFT_INVERTED
+        bool "Invert rear-left motor direction"
+        default n
+
+    config MOTOR_REAR_RIGHT_IA_GPIO
+        int "Rear-right IA GPIO"
+        range 0 33
+        default 17
+
+    config MOTOR_REAR_RIGHT_IB_GPIO
+        int "Rear-right IB GPIO"
+        range 0 33
+        default 16
+
+    config MOTOR_REAR_RIGHT_INVERTED
+        bool "Invert rear-right motor direction"
+        default y
+
+    config MOTOR_PWM_FREQUENCY_HZ
+        int "Motor PWM frequency (Hz)"
+        range 1000 40000
+        default 20000
+
+endmenu

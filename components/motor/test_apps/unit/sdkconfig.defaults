@@ -1,0 +1,2 @@
+# Unity's interactive UART menu blocks the main task while waiting for input.
+CONFIG_ESP_TASK_WDT_INIT=n

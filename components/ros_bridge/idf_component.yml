@@ -1,0 +1,4 @@
+dependencies:
+  micro_ros:
+    git: https://github.com/micro-ROS/micro_ros_espidf_component.git
+    version: b84f9ddda4213c0aa71e08838a384a6adc0f4ddf

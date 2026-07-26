@@ -8,46 +8,44 @@ on:
   pull_request:
 
 jobs:
-  pre-commit:
-    name: Pre-commit
-    runs-on: ubuntu-latest
-
+  devcontainer:
+    name: Devcontainer clean build
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+      - name: Build devcontainer image
+        run: docker build --tag vehicle-ecu-dev --file .devcontainer/Dockerfile .
 
-      - run: pip install pre-commit
-      - run: pre-commit run --all-files
-
-  build:
-    name: Build ESP-IDF
-    runs-on: ubuntu-latest
-    needs: pre-commit
-
-    container:
-      image: espressif/idf:release-v6.0
-
-    defaults:
-      run:
-        shell: bash
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Show ESP-IDF version
+      - name: Verify tools, formatting, and clean project build
         run: |
-          source /opt/esp/idf/export.sh
-          idf.py --version
+          docker run --rm \
+            --volume "${GITHUB_WORKSPACE}:/project" \
+            --workdir /project \
+            vehicle-ecu-dev \
+            bash -lc '
+              set -euo pipefail
+              git config --global --add safe.directory /project
+              test "$(git -C /opt/esp/idf rev-parse HEAD)" = \
+                "102122904ade11fd1ae373848f34ffd7dfb18aeb"
+              python -m pip check
+              pre-commit run --all-files
 
-      - name: Set target
-        run: |
-          source /opt/esp/idf/export.sh
-          idf.py set-target esp32
+              build_project() {
+                (
+                  cd "$1"
+                  idf.py set-target esp32
+                  idf.py build
+                )
+              }
 
-      - name: Build
-        run: |
-          source /opt/esp/idf/export.sh
-          idf.py build
+              build_project .
+              build_project components/motor/test_apps/unit
+              build_project components/drive/test_apps/unit
+              build_project components/motor/test_apps/hardware
+
+              git diff --exit-code -- \
+                dependencies.lock \
+                components/drive/test_apps/unit/dependencies.lock \
+                components/motor/test_apps/hardware/dependencies.lock
+            '

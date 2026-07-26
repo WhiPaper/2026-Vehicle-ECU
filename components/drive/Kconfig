@@ -1,0 +1,48 @@
+menu "Drive control"
+
+    config DRIVE_WHEEL_RADIUS_MM
+        int "Wheel radius (mm)"
+        range 0 1000
+        default 0
+
+    config DRIVE_TRACK_WIDTH_MM
+        int "Left-right wheel track width (mm)"
+        range 0 5000
+        default 0
+
+    config DRIVE_MAX_WHEEL_RPM
+        int "Maximum wheel speed (RPM)"
+        range 0 10000
+        default 0
+
+    config DRIVE_PID_KP_MILLI
+        int "PID Kp x 1000"
+        range 0 1000000
+        default 0
+
+    config DRIVE_PID_KI_MILLI
+        int "PID Ki x 1000"
+        range 0 1000000
+        default 0
+
+    config DRIVE_PID_KD_MILLI
+        int "PID Kd x 1000"
+        range 0 1000000
+        default 0
+
+    config DRIVE_CONTROL_PERIOD_MS
+        int "Control period (ms)"
+        range 5 100
+        default 20
+
+    config DRIVE_COMMAND_TIMEOUT_MS
+        int "Command timeout (ms)"
+        range 100 5000
+        default 500
+
+    config DRIVE_STALL_TIMEOUT_MS
+        int "Encoder stall timeout (ms)"
+        range 100 5000
+        default 500
+
+endmenu

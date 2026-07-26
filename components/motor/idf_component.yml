@@ -1,0 +1,2 @@
+dependencies:
+  espressif/bdc_motor: "^0.2.1"
