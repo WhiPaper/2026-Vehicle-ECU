@@ -57,6 +57,7 @@ jobs:
 
       - name: Create GitHub release
         env:
+          GH_REPO: ${{ github.repository }}
           GH_TOKEN: ${{ github.token }}
           RELEASE_ARCHIVE: firmware/vehicle-ecu-${{ github.event.workflow_run.head_branch }}.tar.gz
           RELEASE_TAG: ${{ github.event.workflow_run.head_branch }}
