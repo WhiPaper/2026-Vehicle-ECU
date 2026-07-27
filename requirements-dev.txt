@@ -47,7 +47,7 @@ pytest-rerunfailures==16.4
 python-dateutil==2.9.0.post0
 python-discovery==1.5.0
 PyYAML==6.0.3
-setuptools==79.0.1
+setuptools==83.0.0
 six==1.17.0
 vcstool==0.3.0
 virtualenv==21.7.0
