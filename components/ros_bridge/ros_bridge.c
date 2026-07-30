@@ -30,7 +30,7 @@
 
 #define ROS_TASK_STACK 14336
 #define ROS_TASK_PRIORITY 5
-#define ROS_PING_TIMEOUT_MS 100
+#define ROS_PING_TIMEOUT_MS CONFIG_ROS_AGENT_PING_TIMEOUT_MS
 #define ROS_RECONNECT_DELAY_MS 500
 #define ROS_CONNECTED_PING_PERIOD_US ((int64_t)CONFIG_ROS_AGENT_PING_PERIOD_MS * 1000)
 #define ROS_TIME_SYNC_RETRY_PERIOD_US ((int64_t)CONFIG_ROS_TIME_SYNC_RETRY_MS * 1000)
@@ -376,7 +376,8 @@ static void run_connected_session(ros_context_t* context)
         const rcl_ret_t spin_result = rclc_executor_spin_some(&context->executor, RCL_MS_TO_NS(5));
         if (spin_result != RCL_RET_OK && spin_result != RCL_RET_TIMEOUT)
         {
-            break;
+            s_last_entity_stage = "executor_spin";
+            s_last_rcl_error = spin_result;
         }
         const int64_t now = esp_timer_get_time();
         if (now - last_ping >= ROS_CONNECTED_PING_PERIOD_US)
@@ -423,12 +424,6 @@ static void run_connected_session(ros_context_t* context)
                     ROS_PUBLISH_FAILED, context->diagnostic_publish_failures);
             }
             last_diagnostic = now;
-        }
-        if (ros_session_recovery_required(
-                context->imu_publish_failures, context->drive_publish_failures,
-                context->diagnostic_publish_failures, CONFIG_ROS_PUBLISH_FAILURE_LIMIT))
-        {
-            break;
         }
         vTaskDelay(pdMS_TO_TICKS(2));
     }

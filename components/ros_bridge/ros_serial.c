@@ -18,8 +18,8 @@ bool ros_serial_open(struct uxrCustomTransport* transport)
         .source_clk = UART_SCLK_DEFAULT,
     };
     if (uart_param_config(port, &config) != ESP_OK ||
-        uart_set_pin(port, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE,
-                     UART_PIN_NO_CHANGE) != ESP_OK ||
+        uart_set_pin(port, CONFIG_MICROROS_UART_TXD, CONFIG_MICROROS_UART_RXD,
+                     CONFIG_MICROROS_UART_RTS, CONFIG_MICROROS_UART_CTS) != ESP_OK ||
         uart_driver_install(port, ROS_UART_RX_BUFFER_SIZE, 0, 0, NULL, 0) != ESP_OK)
     {
         return false;

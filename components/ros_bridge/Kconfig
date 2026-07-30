@@ -25,6 +25,14 @@ menu "Vehicle micro-ROS"
         range 100 5000
         default 500
 
+    config ROS_AGENT_PING_TIMEOUT_MS
+        int "Agent ping response timeout (ms)"
+        range 100 5000
+        default 500
+        help
+            Maximum time to wait for an Agent response. Keep this large enough
+            to tolerate a diagnostic frame already in flight on the UART.
+
     config ROS_TIME_SYNC_RETRY_MS
         int "ROS epoch synchronization retry period (ms)"
         range 100 10000
