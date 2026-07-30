@@ -2,6 +2,7 @@ idf_component_register(
     SRCS
         "test_app_main.c"
         "test_ros_messages.c"
+        "test_ros_session_policy.c"
     REQUIRES
         ros_bridge
         unity

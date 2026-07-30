@@ -5,9 +5,6 @@
         "context": ".."
     },
     "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
-    "remoteUser": "dev",
-    "containerUser": "dev",
-    "updateRemoteUserUID": true,
     "remoteEnv": {
         "LANG": "C.UTF-8",
         "LC_ALL": "C.UTF-8"
@@ -42,5 +39,8 @@
     "postCreateCommand": "git config --global --get-all safe.directory | grep -qxF /workspaces/${localWorkspaceFolderBasename} || git config --global --add safe.directory /workspaces/${localWorkspaceFolderBasename} && pre-commit install && idf.py reconfigure",
     "runArgs": [
         "--privileged"
+    ],
+    "mounts": [
+        "source=/dev/serial/by-id,target=/dev/serial/by-id,type=bind"
     ]
 }

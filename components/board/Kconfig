@@ -104,8 +104,8 @@ menu "Board"
         default 100
         help
             Sampling interval used while calculating the startup bias. The
-            Registry driver currently leaves the sensor output-data rate at
-            its hardware configuration.
+            dedicated IMU task samples the configured MPU6050 registers at
+            this rate during stationary calibration.
 
     config MPU6050_CALIBRATION_SAMPLES
         int "Stationary calibration samples"

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "drive.h"
+#include "imu.h"
 
 #include <diagnostic_msgs/msg/diagnostic_array.h>
 #include <stdbool.h>
@@ -13,6 +14,7 @@ enum
     ROS_FAULT_IMU_PUBLISH = 1U << 18,
     ROS_FAULT_DRIVE_PUBLISH = 1U << 19,
     ROS_FAULT_DIAGNOSTIC_PUBLISH = 1U << 20,
+    ROS_FAULT_DRIVE_DATA = 1U << 21,
 };
 
 typedef struct
@@ -23,7 +25,14 @@ typedef struct
     const drive_state_t* drive_state;
     uint32_t local_faults;
     int64_t command_age_ms;
-    bool imu_calibrated;
+    const imu_snapshot_t* imu_snapshot;
+    int64_t imu_age_ms;
+    int64_t drive_age_ms;
+    const char* last_entity_stage;
+    int32_t last_rcl_error;
+    const char* firmware_version;
+    const char* build_id;
+    const char* idf_version;
 } ros_diagnostics_input_t;
 
 bool ros_diagnostics_initialize(diagnostic_msgs__msg__DiagnosticArray* diagnostic);

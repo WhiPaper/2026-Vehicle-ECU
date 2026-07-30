@@ -35,6 +35,16 @@ menu "Vehicle micro-ROS"
         range 1 100
         default 10
 
+    config ROS_IMU_STALE_TIMEOUT_MS
+        int "Maximum IMU snapshot age (ms)"
+        range 20 10000
+        default 100
+
+    config ROS_DRIVE_STALE_TIMEOUT_MS
+        int "Maximum drive snapshot age (ms)"
+        range 20 10000
+        default 100
+
     config ROS_IMU_ANGULAR_VARIANCE_MICRO
         int "IMU angular velocity variance (micro-units)"
         range 1 1000000

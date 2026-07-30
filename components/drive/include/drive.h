@@ -46,6 +46,8 @@ extern "C"
         uint32_t faults;
         int64_t timestamp_us;
         bool command_active;
+        bool ready;
+        bool encoder_valid;
     } drive_state_t;
 
     esp_err_t drive_init(const drive_config_t* config);

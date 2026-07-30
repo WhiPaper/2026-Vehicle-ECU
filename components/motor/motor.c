@@ -17,6 +17,7 @@
 #define MOTOR_MCPWM_RESOLUTION_HZ 10000000U
 #define MOTOR_MCPWM_PER_GROUP 3U
 #define MOTOR_DIRECTION_UNKNOWN 2
+#define MOTOR_LOCK_TIMEOUT_MS 5
 
 typedef uint32_t motor_mask_t;
 
@@ -165,8 +166,8 @@ static esp_err_t lock_motor(void)
 {
     ESP_RETURN_ON_FALSE(s_lock != NULL, ESP_ERR_INVALID_STATE, MOTOR_TAG,
                         "Motor lock is not initialized");
-    ESP_RETURN_ON_FALSE(xSemaphoreTake(s_lock, portMAX_DELAY) == pdTRUE, ESP_ERR_TIMEOUT, MOTOR_TAG,
-                        "Could not acquire motor lock");
+    ESP_RETURN_ON_FALSE(xSemaphoreTake(s_lock, pdMS_TO_TICKS(MOTOR_LOCK_TIMEOUT_MS)) == pdTRUE,
+                        ESP_ERR_TIMEOUT, MOTOR_TAG, "Could not acquire motor lock");
     if (!s_initialized)
     {
         xSemaphoreGive(s_lock);
@@ -263,8 +264,8 @@ esp_err_t motor_init(const motor_config_t* config)
 {
     ESP_RETURN_ON_ERROR(validate_config(config), MOTOR_TAG, "Invalid motor configuration");
     ESP_RETURN_ON_ERROR(ensure_lock_initialized(), MOTOR_TAG, "Could not initialize motor lock");
-    ESP_RETURN_ON_FALSE(xSemaphoreTake(s_lock, portMAX_DELAY) == pdTRUE, ESP_ERR_TIMEOUT, MOTOR_TAG,
-                        "Could not acquire motor lock");
+    ESP_RETURN_ON_FALSE(xSemaphoreTake(s_lock, pdMS_TO_TICKS(MOTOR_LOCK_TIMEOUT_MS)) == pdTRUE,
+                        ESP_ERR_TIMEOUT, MOTOR_TAG, "Could not acquire motor lock");
     if (s_initialized)
     {
         const esp_err_t result = config_matches(config) ? ESP_OK : ESP_ERR_INVALID_STATE;

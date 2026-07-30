@@ -10,7 +10,7 @@ Raspberry Pi 5의 ROS 2 Jazzy 시스템이 상위 제어와 센서 융합을 담
 ## 대상 환경
 
 - ESP32 DevKitC V4
-- ESP-IDF 6.2 development snapshot (commit `102122904ade`)
+- ESP-IDF 6.0.2
 - FreeRTOS, ESP-IDF Component Manager
 - Raspberry Pi 5, ROS 2 Jazzy, micro-ROS Agent
 
@@ -18,7 +18,7 @@ Raspberry Pi 5의 ROS 2 Jazzy 시스템이 상위 제어와 센서 융합을 담
 
 - 4채널 L9110S 모터 출력과 좌우 skid-steer 제어
 - Registry PCNT 드라이버 기반 좌·우 quadrature 엔코더
-- Registry MPU6050 드라이버 기반 6축 SI 단위 측정과 정지 바이어스 보정
+- 유한-timeout ESP-IDF I2C 기반 MPU6050 측정과 정지 바이어스 보정
 - 엔코더 PID 속도 제어, odometry, 명령·stall fail-safe
 - Raspberry Pi 5와 USB-UART 기반 micro-ROS 통신
 

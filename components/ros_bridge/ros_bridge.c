@@ -2,7 +2,9 @@
 
 #include "drive.h"
 #include "driver/uart.h"
+#include "esp_app_desc.h"
 #include "esp_check.h"
+#include "esp_system.h"
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -10,6 +12,7 @@
 #include "ros_diagnostics.h"
 #include "ros_messages.h"
 #include "ros_serial.h"
+#include "ros_session_policy.h"
 
 #include <diagnostic_msgs/msg/diagnostic_array.h>
 #include <geometry_msgs/msg/twist.h>
@@ -22,6 +25,7 @@
 #include <rmw_microros/rmw_microros.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 
 #define ROS_TASK_STACK 14336
@@ -77,8 +81,21 @@ static uart_port_t s_uart_port = UART_NUM_0;
 static TaskHandle_t s_ros_task;
 static ros_session_state_t s_session_state = ROS_SESSION_WAITING_AGENT;
 static int64_t s_last_command_us;
+static const char* s_last_entity_stage = "none";
+static int32_t s_last_rcl_error;
 
 static void ignore_rcl_result(rcl_ret_t result) { (void)result; }
+
+static bool entity_result_ok(rcl_ret_t result, const char* stage)
+{
+    if (result == RCL_RET_OK)
+    {
+        return true;
+    }
+    s_last_entity_stage = stage;
+    s_last_rcl_error = result;
+    return false;
+}
 
 static builtin_interfaces__msg__Time ros_now(void)
 {
@@ -134,45 +151,55 @@ static bool create_entities(ros_context_t* context)
     context->odom_publisher = rcl_get_zero_initialized_publisher();
     context->diagnostic_publisher = rcl_get_zero_initialized_publisher();
 
-    if (rclc_support_init(&context->support, 0, NULL, &context->allocator) != RCL_RET_OK)
+    if (!entity_result_ok(rclc_support_init(&context->support, 0, NULL, &context->allocator),
+                          "support"))
         return false;
     context->entity_mask |= ROS_ENTITY_SUPPORT;
-    if (rclc_node_init_default(&context->node, "vehicle_ecu", "", &context->support) != RCL_RET_OK)
+    if (!entity_result_ok(
+            rclc_node_init_default(&context->node, "vehicle_ecu", "", &context->support), "node"))
         return false;
     context->entity_mask |= ROS_ENTITY_NODE;
-    if (rclc_subscription_init_default(&context->command_subscription, &context->node,
-                                       ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
-                                       "cmd_vel") != RCL_RET_OK)
+    if (!entity_result_ok(rclc_subscription_init_default(
+                              &context->command_subscription, &context->node,
+                              ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist), "cmd_vel"),
+                          "cmd_vel_subscription"))
         return false;
     context->entity_mask |= ROS_ENTITY_SUBSCRIPTION;
-    if (rclc_publisher_init_best_effort(&context->imu_publisher, &context->node,
-                                        ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Imu),
-                                        "imu/data_raw") != RCL_RET_OK)
+    if (!entity_result_ok(rclc_publisher_init_best_effort(
+                              &context->imu_publisher, &context->node,
+                              ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Imu), "imu/data_raw"),
+                          "imu_publisher"))
         return false;
     context->entity_mask |= ROS_ENTITY_IMU_PUBLISHER;
-    if (rclc_publisher_init_best_effort(&context->joint_publisher, &context->node,
-                                        ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, JointState),
-                                        "joint_states") != RCL_RET_OK)
+    if (!entity_result_ok(rclc_publisher_init_best_effort(
+                              &context->joint_publisher, &context->node,
+                              ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, JointState),
+                              "joint_states"),
+                          "joint_publisher"))
         return false;
     context->entity_mask |= ROS_ENTITY_JOINT_PUBLISHER;
-    if (rclc_publisher_init_best_effort(&context->odom_publisher, &context->node,
-                                        ROSIDL_GET_MSG_TYPE_SUPPORT(nav_msgs, msg, Odometry),
-                                        "odom") != RCL_RET_OK)
+    if (!entity_result_ok(rclc_publisher_init_best_effort(
+                              &context->odom_publisher, &context->node,
+                              ROSIDL_GET_MSG_TYPE_SUPPORT(nav_msgs, msg, Odometry), "odom"),
+                          "odom_publisher"))
         return false;
     context->entity_mask |= ROS_ENTITY_ODOM_PUBLISHER;
-    if (rclc_publisher_init_default(
-            &context->diagnostic_publisher, &context->node,
-            ROSIDL_GET_MSG_TYPE_SUPPORT(diagnostic_msgs, msg, DiagnosticArray),
-            "diagnostics") != RCL_RET_OK)
+    if (!entity_result_ok(rclc_publisher_init_default(
+                              &context->diagnostic_publisher, &context->node,
+                              ROSIDL_GET_MSG_TYPE_SUPPORT(diagnostic_msgs, msg, DiagnosticArray),
+                              "diagnostics"),
+                          "diagnostic_publisher"))
         return false;
     context->entity_mask |= ROS_ENTITY_DIAGNOSTIC_PUBLISHER;
-    if (rclc_executor_init(&context->executor, &context->support.context, 1, &context->allocator) !=
-        RCL_RET_OK)
+    if (!entity_result_ok(rclc_executor_init(&context->executor, &context->support.context, 1,
+                                             &context->allocator),
+                          "executor"))
         return false;
     context->entity_mask |= ROS_ENTITY_EXECUTOR;
-    if (rclc_executor_add_subscription(&context->executor, &context->command_subscription,
-                                       &context->messages.command, command_callback,
-                                       ON_NEW_DATA) != RCL_RET_OK)
+    if (!entity_result_ok(rclc_executor_add_subscription(
+                              &context->executor, &context->command_subscription,
+                              &context->messages.command, command_callback, ON_NEW_DATA),
+                          "executor_subscription"))
         return false;
 
     (void)rmw_uros_sync_session(1000);
@@ -211,36 +238,28 @@ static void destroy_entities(ros_context_t* context)
 
 static void fini_messages(ros_context_t* context) { ros_messages_finalize(&context->messages); }
 
-static uint32_t publish_imu(ros_context_t* context)
+static ros_publish_result_t publish_imu(ros_context_t* context, int64_t now)
 {
-    static uint16_t consecutive_read_failures;
-    imu_sample_t sample;
-    if (imu_read(&sample) != ESP_OK)
+    imu_snapshot_t snapshot;
+    if (imu_get_snapshot(&snapshot) != ESP_OK ||
+        !imu_snapshot_is_fresh(&snapshot, now, CONFIG_ROS_IMU_STALE_TIMEOUT_MS))
     {
-        consecutive_read_failures++;
-        if (consecutive_read_failures == 1 || consecutive_read_failures >= 100)
-        {
-            (void)imu_recover();
-            if (consecutive_read_failures >= 100)
-            {
-                consecutive_read_failures = 1;
-            }
-        }
-        return ROS_FAULT_IMU_READ;
+        return ROS_PUBLISH_SKIPPED;
     }
-    consecutive_read_failures = 0;
-    ros_messages_map_imu(&context->messages, &sample, ros_now());
+    ros_messages_map_imu(&context->messages, &snapshot.sample, ros_now());
     return rcl_publish(&context->imu_publisher, &context->messages.imu, NULL) == RCL_RET_OK
-               ? 0
-               : ROS_FAULT_IMU_PUBLISH;
+               ? ROS_PUBLISH_OK
+               : ROS_PUBLISH_FAILED;
 }
 
-static uint32_t publish_drive(ros_context_t* context)
+static ros_publish_result_t publish_drive(ros_context_t* context, int64_t now)
 {
     drive_state_t state;
-    if (drive_get_state(&state) != ESP_OK)
+    if (drive_get_state(&state) != ESP_OK || !state.ready || !state.encoder_valid ||
+        now < state.timestamp_us ||
+        now - state.timestamp_us > (int64_t)CONFIG_ROS_DRIVE_STALE_TIMEOUT_MS * 1000)
     {
-        return ROS_FAULT_DRIVE_PUBLISH;
+        return ROS_PUBLISH_SKIPPED;
     }
     const builtin_interfaces__msg__Time stamp = ros_now();
     ros_messages_map_drive(&context->messages, &state, stamp);
@@ -248,13 +267,16 @@ static uint32_t publish_drive(ros_context_t* context)
         rcl_publish(&context->joint_publisher, &context->messages.joints, NULL);
     const rcl_ret_t odom_result =
         rcl_publish(&context->odom_publisher, &context->messages.odom, NULL);
-    return joint_result == RCL_RET_OK && odom_result == RCL_RET_OK ? 0 : ROS_FAULT_DRIVE_PUBLISH;
+    return joint_result == RCL_RET_OK && odom_result == RCL_RET_OK ? ROS_PUBLISH_OK
+                                                                   : ROS_PUBLISH_FAILED;
 }
 
 static bool publish_diagnostics(ros_context_t* context)
 {
     drive_state_t state = {0};
     const bool drive_state_valid = drive_get_state(&state) == ESP_OK;
+    imu_snapshot_t imu_snapshot = {0};
+    const bool imu_snapshot_valid = imu_get_snapshot(&imu_snapshot) == ESP_OK;
     const bool time_synchronized = rmw_uros_epoch_synchronized();
     if (time_synchronized)
     {
@@ -265,21 +287,81 @@ static bool publish_diagnostics(ros_context_t* context)
         context->local_faults |= ROS_FAULT_TIME;
     }
     context->messages.diagnostic.header.stamp = ros_now();
-    const int64_t age_ms =
-        s_last_command_us > 0 ? (esp_timer_get_time() - s_last_command_us) / 1000 : 0;
+    const int64_t now = esp_timer_get_time();
+    const int64_t command_age_ms = s_last_command_us > 0 ? (now - s_last_command_us) / 1000 : 0;
+    const int64_t imu_age_ms = imu_snapshot_valid && imu_snapshot.last_success_us > 0
+                                   ? (now - imu_snapshot.last_success_us) / 1000
+                                   : -1;
+    const int64_t drive_age_ms =
+        drive_state_valid && state.timestamp_us > 0 ? (now - state.timestamp_us) / 1000 : -1;
+    const bool imu_data_available = imu_snapshot_valid && imu_snapshot.valid && imu_age_ms >= 0 &&
+                                    imu_age_ms <= CONFIG_ROS_IMU_STALE_TIMEOUT_MS;
+    const bool drive_data_available = drive_state_valid && state.ready && state.encoder_valid &&
+                                      drive_age_ms >= 0 &&
+                                      drive_age_ms <= CONFIG_ROS_DRIVE_STALE_TIMEOUT_MS;
+    if (imu_data_available)
+        context->local_faults &= ~ROS_FAULT_IMU_READ;
+    else
+        context->local_faults |= ROS_FAULT_IMU_READ;
+    if (drive_data_available)
+        context->local_faults &= ~ROS_FAULT_DRIVE_DATA;
+    else
+        context->local_faults |= ROS_FAULT_DRIVE_DATA;
+
+    const esp_app_desc_t* app = esp_app_get_description();
+    char build_id[17] = "unknown";
+    if (app != NULL)
+    {
+        for (size_t i = 0; i < 8; ++i)
+        {
+            snprintf(&build_id[i * 2], 3, "%02x", app->app_elf_sha256[i]);
+        }
+    }
     const ros_diagnostics_input_t input = {
         .session_state = session_state_name(),
         .time_synchronized = time_synchronized,
         .drive_state_valid = drive_state_valid,
         .drive_state = &state,
         .local_faults = context->local_faults,
-        .command_age_ms = age_ms,
-        .imu_calibrated = imu_is_calibrated(),
+        .command_age_ms = command_age_ms,
+        .imu_snapshot = &imu_snapshot,
+        .imu_age_ms = imu_age_ms,
+        .drive_age_ms = drive_age_ms,
+        .last_entity_stage = s_last_entity_stage,
+        .last_rcl_error = s_last_rcl_error,
+        .firmware_version = app != NULL ? app->version : "unknown",
+        .build_id = build_id,
+        .idf_version = esp_get_idf_version(),
     };
     ros_diagnostics_update(&context->messages.diagnostic, &input);
 
     return rcl_publish(&context->diagnostic_publisher, &context->messages.diagnostic, NULL) ==
            RCL_RET_OK;
+}
+
+static void update_publish_status(ros_context_t* context, ros_publish_result_t result,
+                                  uint32_t publish_fault, uint32_t data_fault,
+                                  uint8_t* consecutive_failures)
+{
+    if (result == ROS_PUBLISH_FAILED)
+    {
+        context->local_faults |= publish_fault;
+    }
+    else
+    {
+        context->local_faults &= ~publish_fault;
+    }
+
+    if (result == ROS_PUBLISH_SKIPPED)
+    {
+        context->local_faults |= data_fault;
+    }
+    else if (result == ROS_PUBLISH_OK)
+    {
+        context->local_faults &= ~data_fault;
+    }
+
+    *consecutive_failures = ros_publish_failure_count(result, *consecutive_failures);
 }
 
 static void run_connected_session(ros_context_t* context)
@@ -315,26 +397,16 @@ static void run_connected_session(ros_context_t* context)
         const bool time_synchronized = rmw_uros_epoch_synchronized();
         if (time_synchronized && now - last_imu >= ROS_IMU_PERIOD_US)
         {
-            const uint32_t imu_fault = publish_imu(context);
-            context->local_faults =
-                (context->local_faults & ~(ROS_FAULT_IMU_READ | ROS_FAULT_IMU_PUBLISH)) | imu_fault;
-            if ((imu_fault & ROS_FAULT_IMU_PUBLISH) != 0)
-            {
-                context->imu_publish_failures++;
-            }
-            else if ((imu_fault & ROS_FAULT_IMU_READ) == 0)
-            {
-                context->imu_publish_failures = 0;
-            }
+            const ros_publish_result_t result = publish_imu(context, now);
+            update_publish_status(context, result, ROS_FAULT_IMU_PUBLISH, ROS_FAULT_IMU_READ,
+                                  &context->imu_publish_failures);
             last_imu = now;
         }
         if (time_synchronized && now - last_drive >= ROS_DRIVE_PERIOD_US)
         {
-            const uint32_t drive_fault = publish_drive(context);
-            context->local_faults =
-                (context->local_faults & ~ROS_FAULT_DRIVE_PUBLISH) | drive_fault;
-            context->drive_publish_failures =
-                drive_fault != 0 ? context->drive_publish_failures + 1 : 0;
+            const ros_publish_result_t result = publish_drive(context, now);
+            update_publish_status(context, result, ROS_FAULT_DRIVE_PUBLISH, ROS_FAULT_DRIVE_DATA,
+                                  &context->drive_publish_failures);
             last_drive = now;
         }
         if (now - last_diagnostic >= ROS_DIAGNOSTIC_PERIOD_US)
@@ -347,13 +419,14 @@ static void run_connected_session(ros_context_t* context)
             else
             {
                 context->local_faults |= ROS_FAULT_DIAGNOSTIC_PUBLISH;
-                context->diagnostic_publish_failures++;
+                context->diagnostic_publish_failures = ros_publish_failure_count(
+                    ROS_PUBLISH_FAILED, context->diagnostic_publish_failures);
             }
             last_diagnostic = now;
         }
-        if (context->imu_publish_failures >= CONFIG_ROS_PUBLISH_FAILURE_LIMIT ||
-            context->drive_publish_failures >= CONFIG_ROS_PUBLISH_FAILURE_LIMIT ||
-            context->diagnostic_publish_failures >= CONFIG_ROS_PUBLISH_FAILURE_LIMIT)
+        if (ros_session_recovery_required(
+                context->imu_publish_failures, context->drive_publish_failures,
+                context->diagnostic_publish_failures, CONFIG_ROS_PUBLISH_FAILURE_LIMIT))
         {
             break;
         }
@@ -385,7 +458,13 @@ static void ros_task(void* argument)
 
         case ROS_SESSION_CREATING_ENTITIES:
             memset(&context, 0, sizeof(context));
-            if (ros_messages_initialize(&context.messages) && create_entities(&context))
+            if (!ros_messages_initialize(&context.messages))
+            {
+                s_last_entity_stage = "message_storage";
+                s_last_rcl_error = RCL_RET_BAD_ALLOC;
+                s_session_state = ROS_SESSION_RECOVERING;
+            }
+            else if (create_entities(&context))
             {
                 s_session_state = ROS_SESSION_CONNECTED;
             }

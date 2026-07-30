@@ -4,6 +4,7 @@ idf_component_register(
         "ros_bridge.c"
         "ros_diagnostics.c"
         "ros_messages.c"
+        "ros_session_policy.c"
     INCLUDE_DIRS "include"
     PRIV_INCLUDE_DIRS "."
     REQUIRES
@@ -12,6 +13,8 @@ idf_component_register(
         imu
         micro_ros
     PRIV_REQUIRES
+        esp_app_format
         esp_driver_uart
+        esp_system
         esp_timer
 )

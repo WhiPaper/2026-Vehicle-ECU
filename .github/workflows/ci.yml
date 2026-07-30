@@ -86,6 +86,12 @@ jobs:
             component_cache: true
             qemu_test: true
             test_file: test_drive.py
+          - name: imu unit
+            path: components/imu/test_apps/unit
+            cache_key: imu-unit
+            component_cache: true
+            qemu_test: true
+            test_file: test_imu.py
           - name: ros_bridge unit
             path: components/ros_bridge/test_apps/unit
             cache_key: ros-bridge-unit

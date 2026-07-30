@@ -43,7 +43,7 @@ Pi의 `robot_localization`이 발행한다.
 | Message mapper (`ros_messages`) | `drive_state_t`, `imu_sample_t`와 ROS 메시지 간 변환 및 메시지 저장공간 관리 | 상태의 원본 소유권 |
 | Diagnostics mapper (`ros_diagnostics`) | fault snapshot, 보정·통신 상태를 `DiagnosticArray`로 변환 | 세션 전이와 하드웨어 복구 |
 | `drive` | 명령 watchdog, PID, stall 검출, 휠 odometry snapshot | ROS 연결 |
-| `imu` | MPU6050 취득, SI 단위 변환, 정지 bias 보정과 복구 | 센서 융합 |
+| `imu` | 전용 태스크에서 MPU6050 취득, snapshot, 정지 bias 보정과 복구 | 센서 융합 |
 
 `drive` 태스크가 제어 상태의 단일 writer이고, ROS 계층은 공개 snapshot API로
 읽는다. `cmd_vel` callback은 검증된 명령만 `drive`에 넘긴다. 연결 상태나
@@ -70,6 +70,11 @@ Agent 단절 판정과 엔티티 정리는 명령 watchdog과 별개다. 어느 
 stamp 0의 diagnostics로 `time_synchronized=false`를 알린다. Pi의 융합
 노드는 동기화되지 않았거나 미래·과거 허용 범위를 벗어난 표본을 사용하지
 않는다.
+
+센서 unavailable 또는 stale은 transport 실패와 구분한다. IMU나 drive
+snapshot이 기본 100 ms freshness 한도를 넘으면 해당 raw 토픽만 중단하며
+micro-ROS 세션은 유지한다. 실제 `rcl_publish()` 실패만 연속 발행 실패와
+세션 recovery 조건에 포함한다.
 
 ## ROS 인터페이스 계약
 
@@ -116,9 +121,9 @@ z, roll, pitch 항목은 Pi의 `two_d_mode`로 제한하며 융합 입력으로 
 
 | status name | level 의미 | 필수 key |
 |---|---|---|
-| `vehicle_ecu/transport` | 연결 또는 시각 문제 | `session_state`, `agent_connected`, `time_synchronized`, `last_error` |
-| `vehicle_ecu/drive` | 보정·명령·엔코더·stall·모터 상태 | `calibrated`, `command_active`, `command_age_ms`, `encoder_ok`, `stalled`, `motor_ok`, `fault_mask` |
-| `vehicle_ecu/imu` | IMU 초기화·읽기·발행 상태 | `imu_ok`, `calibrated`, `last_error` |
+| `vehicle_ecu/transport` | 연결 또는 시각 문제 | 기존 key와 `last_entity_stage`, `last_rcl_error`, `firmware_version`, `build_id`, `idf_version` |
+| `vehicle_ecu/drive` | 보정·명령·엔코더·stall·모터 상태 | 기존 key와 `ready`, `data_age_ms` |
+| `vehicle_ecu/imu` | IMU 초기화·읽기·발행 상태 | 기존 key와 `state`, `data_age_ms` |
 
 정상은 `OK`, 기능은 유지되지만 시각 미동기 또는 IMU 부재이면 `WARN`,
 주행 불가나 motor/encoder/stall 오류이면 `ERROR`다. 문자열은 고정된

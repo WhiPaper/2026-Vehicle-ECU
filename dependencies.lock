@@ -81,18 +81,10 @@ dependencies:
       path: .
       type: git
     version: b84f9ddda4213c0aa71e08838a384a6adc0f4ddf
-  tny-robotics/mpu6050-esp-idf:
-    component_hash: 4b4236633c84283401ef809fab7d6375e6998aeb3744758bb2d93c3a490544c9
-    dependencies: []
-    source:
-      registry_url: https://components.espressif.com/
-      type: service
-    version: 1.1.0
 direct_dependencies:
 - espp/encoder
 - espressif/bdc_motor
 - micro_ros
-- tny-robotics/mpu6050-esp-idf
-manifest_hash: d2777413a946cac9c794f2bf28e34d15478d6a387d75215df08e33106ee25810
+manifest_hash: 261186d5d4d86487d4b9944ad538d0e6eddd3337aba2e1d4c3dd49423850341c
 target: esp32
 version: 3.0.0

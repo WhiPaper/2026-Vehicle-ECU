@@ -13,7 +13,7 @@
 | 기능 | 선택 | 프로젝트에 남긴 책임 |
 | --- | --- | --- |
 | 4채널 L9110S 출력 | `espressif/bdc_motor` 0.2.1 | `motor`의 4모터 자원 배치, 방향 반전, 시동 부스트, tank mixing과 안전 정지 |
-| MPU6050 | `tny-robotics/mpu6050-esp-idf` 1.1.0 | `imu`의 I2C bus 수명주기, SI 단위 변환, 정지 보정, timestamp와 복구 |
+| MPU6050 | ESP-IDF `i2c_master` 직접 사용 | 유한 transaction timeout, 독립 취득 태스크, SI 단위 변환, 정지 보정과 복구 |
 | 좌·우 quadrature 엔코더 | `espp/encoder` 1.1.6 | `wheel_encoder`의 C API, 좌우 반전, 표본간 delta, RPM과 timestamp |
 | micro-ROS | Git commit 고정 | Registry 패키지가 없어 upstream ESP-IDF 컴포넌트를 Component Manager의 Git 의존성으로 사용 |
 

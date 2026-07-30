@@ -13,8 +13,15 @@ static const char* TAG = "vehicle_ecu";
 void app_main(void)
 {
     ESP_ERROR_CHECK(board_validate());
+    ESP_ERROR_CHECK(ros_bridge_start());
 
-    esp_err_t result = motor_init(board_motor_config());
+    esp_err_t result = imu_start(board_imu_config());
+    if (result != ESP_OK)
+    {
+        ESP_LOGE(TAG, "IMU task initialization failed: %s", esp_err_to_name(result));
+    }
+
+    result = motor_init(board_motor_config());
     const bool motor_ready = result == ESP_OK;
     if (result != ESP_OK)
     {
@@ -46,16 +53,5 @@ void app_main(void)
         ESP_LOGE(TAG, "Drive task disabled because required hardware is unavailable");
     }
 
-    result = imu_init(board_imu_config());
-    if (result == ESP_OK)
-    {
-        result = imu_calibrate_stationary();
-    }
-    if (result != ESP_OK)
-    {
-        ESP_LOGE(TAG, "MPU6050 unavailable or calibration rejected: %s", esp_err_to_name(result));
-    }
-
-    ESP_ERROR_CHECK(ros_bridge_start());
     ESP_LOGI(TAG, "Vehicle ECU started; motors remain stopped until cmd_vel");
 }

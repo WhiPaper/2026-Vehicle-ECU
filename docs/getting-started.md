@@ -9,11 +9,11 @@
 
 - ESP32 DevKitC V4 (ESP32-WROOM-32D)
 - 데이터 통신을 지원하는 USB 케이블
-- VS Code와 Dev Containers 확장 또는 호환되는 ESP-IDF 6.2 개발 환경
+- VS Code와 Dev Containers 확장 또는 호환되는 ESP-IDF 6.0.2 개발 환경
 - 실차 시험 시 외부 모터 전원, 퓨즈와 비상 정지 수단
 
-프로젝트가 고정한 ESP-IDF commit은 `102122904ade`다. 다른 ESP-IDF
-버전에서는 빌드 결과와 Component Manager 의존성이 달라질 수 있다.
+프로젝트와 CI가 고정한 ESP-IDF 버전은 `6.0.2`다. 다른 ESP-IDF 버전에서는
+빌드 결과와 Component Manager 의존성이 달라질 수 있다.
 
 ## 권장 방법: devcontainer
 

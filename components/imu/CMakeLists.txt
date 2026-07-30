@@ -5,5 +5,5 @@ idf_component_register(
     INCLUDE_DIRS "include"
     PRIV_INCLUDE_DIRS "private_include"
     REQUIRES esp_common
-    PRIV_REQUIRES esp_driver_i2c esp_timer tny-robotics__mpu6050-esp-idf
+    PRIV_REQUIRES esp_driver_i2c esp_timer
 )

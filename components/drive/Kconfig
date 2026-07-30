@@ -32,8 +32,11 @@ menu "Drive control"
 
     config DRIVE_CONTROL_PERIOD_MS
         int "Control period (ms)"
-        range 5 100
+        range 5 20
         default 20
+        help
+            The upper bound guarantees that an emergency-stop request is
+            consumed by the drive task within 20 ms.
 
     config DRIVE_COMMAND_TIMEOUT_MS
         int "Command timeout (ms)"

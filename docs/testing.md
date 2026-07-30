@@ -11,8 +11,8 @@ CI는 Ubuntu formatting job과 `espressif/idf:v6.0.2` build matrix에서 다음
 
 - pre-commit 검사
 - 루트 펌웨어의 clean build
-- `motor`, `drive`, `ros_bridge` 단위 시험 애플리케이션 build
-- QEMU에서 세 단위 시험 애플리케이션의 Unity test case 실행
+- `motor`, `drive`, `imu`, `ros_bridge` 단위 시험 애플리케이션 build
+- QEMU에서 네 단위 시험 애플리케이션의 Unity test case 실행
 - 모터 하드웨어 시험 애플리케이션 build
 - Component Manager lock file이 빌드 후 바뀌지 않는지 확인
 
@@ -110,6 +110,13 @@ Enter를 눌러 case 목록을 표시한 뒤 필요한 시험 번호만 입력�
 - `/cmd_vel` 중단 후 500 ms 안에 모터 정지
 - 엔코더 stall 시 500 ms 후 출력 정지와 drive `ERROR`
 - Agent 재시작 후 과거 명령을 재생하지 않고 자동 재연결
+- MPU6050을 분리해도 `/odom`, `/joint_states`, `/diagnostics`, `/cmd_vel`
+  처리가 유지되고 `/imu/data_raw`만 100 ms freshness 한도 이후 중단
+- MPU6050 재연결과 정지 보정 성공 후 `/imu/data_raw` 자동 재개
+- 엔코더 초기화 실패 시 `/odom`과 `/joint_states`만 중단되고 IMU와
+  diagnostics 및 micro-ROS 세션 유지
+- 반복 USB·센서 장애 주입 30분 동안 task watchdog reset과 지속적인 heap
+  감소가 없을 것
 
 ROS 측 명령과 확인 절차는
 [Raspberry Pi ROS 통합 가이드](rpi-ros-integration.md#확인-명령)를 따른다.

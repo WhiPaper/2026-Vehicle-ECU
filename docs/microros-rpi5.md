@@ -69,6 +69,23 @@ ros2 topic pub --once /cmd_vel geometry_msgs/msg/Twist \
   의도된 미보정 잠금이다. 먼저
   [보정 절차](calibration.md)를 완료한다.
 
+Agent를 `-v6`로 실행했을 때 ESP32 client의 ping 또는 session 요청이 전혀
+보이지 않으면 entity/QoS보다 앞선 펌웨어 실행 또는 UART transport 문제다.
+session 요청은 보이지만 토픽이 없으면 diagnostics의 `last_entity_stage`와
+`last_rcl_error`를 확인한다. IMU만 멈추면 `vehicle_ecu/imu.state`,
+`last_error`, `data_age_ms`로 I2C와 보정 상태를 확인한다.
+
+현재 빌드와 실제 flash app을 비교하려면 Agent를 종료한 뒤 app 크기만큼
+읽어 SHA-256 또는 byte 비교를 수행한다.
+
+```bash
+app_size="$(stat -c %s build/vehicle_ecu.bin)"
+python -m esptool --chip esp32 -p /dev/serial/by-id/<CP2102-device> \
+  read-flash 0x10000 "$app_size" flashed-app.bin
+sha256sum build/vehicle_ecu.bin flashed-app.bin
+cmp build/vehicle_ecu.bin flashed-app.bin
+```
+
 micro-ROS ESP-IDF Jazzy 컴포넌트는
 `components/ros_bridge/idf_component.yml`의 Git
 dependency로 관리하며 commit

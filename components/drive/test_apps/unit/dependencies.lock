@@ -65,17 +65,9 @@ dependencies:
     source:
       type: idf
     version: 6.0.2
-  tny-robotics/mpu6050-esp-idf:
-    component_hash: 4b4236633c84283401ef809fab7d6375e6998aeb3744758bb2d93c3a490544c9
-    dependencies: []
-    source:
-      registry_url: https://components.espressif.com/
-      type: service
-    version: 1.1.0
 direct_dependencies:
 - espp/encoder
 - espressif/bdc_motor
-- tny-robotics/mpu6050-esp-idf
-manifest_hash: 87945fedeeffb21d432977428d010fa9745e64d1b86014d30adb65b006fc5a82
+manifest_hash: c0ef5be0b7e00179b3867b5f6468afc015266553bf9a92f9151589223c6e2fce
 target: esp32
 version: 3.0.0

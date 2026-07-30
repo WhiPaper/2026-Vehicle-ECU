@@ -2,6 +2,7 @@
 
 #include <diagnostic_msgs/msg/diagnostic_status.h>
 #include <diagnostic_msgs/msg/key_value.h>
+#include <esp_err.h>
 #include <rosidl_runtime_c/string_functions.h>
 
 #include <stdio.h>
@@ -66,19 +67,16 @@ static bool initialize_status(diagnostic_msgs__msg__DiagnosticStatus* status, co
 bool ros_diagnostics_initialize(diagnostic_msgs__msg__DiagnosticArray* diagnostic)
 {
     static const char* const transport_keys[] = {
-        "session_state",
-        "agent_connected",
-        "time_synchronized",
-        "last_error",
+        "session_state",    "agent_connected",   "time_synchronized",
+        "last_error",       "last_entity_stage", "last_rcl_error",
+        "firmware_version", "build_id",          "idf_version",
     };
     static const char* const drive_keys[] = {
-        "calibrated", "command_active", "command_age_ms", "encoder_ok",
-        "stalled",    "motor_ok",       "fault_mask",
+        "calibrated", "command_active", "command_age_ms", "encoder_ok",  "stalled",
+        "motor_ok",   "fault_mask",     "ready",          "data_age_ms",
     };
     static const char* const imu_keys[] = {
-        "imu_ok",
-        "calibrated",
-        "last_error",
+        "imu_ok", "calibrated", "last_error", "state", "data_age_ms",
     };
 
     if (!diagnostic_msgs__msg__DiagnosticStatus__Sequence__init(&diagnostic->status,
@@ -87,10 +85,10 @@ bool ros_diagnostics_initialize(diagnostic_msgs__msg__DiagnosticArray* diagnosti
         return false;
     }
     return initialize_status(&diagnostic->status.data[DIAGNOSTIC_TRANSPORT],
-                             "vehicle_ecu/transport", 4, transport_keys) &&
-           initialize_status(&diagnostic->status.data[DIAGNOSTIC_DRIVE], "vehicle_ecu/drive", 7,
+                             "vehicle_ecu/transport", 9, transport_keys) &&
+           initialize_status(&diagnostic->status.data[DIAGNOSTIC_DRIVE], "vehicle_ecu/drive", 9,
                              drive_keys) &&
-           initialize_status(&diagnostic->status.data[DIAGNOSTIC_IMU], "vehicle_ecu/imu", 3,
+           initialize_status(&diagnostic->status.data[DIAGNOSTIC_IMU], "vehicle_ecu/imu", 5,
                              imu_keys);
 }
 
@@ -125,34 +123,44 @@ void ros_diagnostics_update(diagnostic_msgs__msg__DiagnosticArray* diagnostic,
     set_key_value(transport, 3,
                   !input->time_synchronized ? "time synchronization failed"
                                             : (!ros_publish_ok ? "ROS publisher failure" : "none"));
+    set_key_value(transport, 4, input->last_entity_stage);
+    char value[DIAGNOSTIC_VALUE_CAPACITY + 1];
+    snprintf(value, sizeof(value), "%ld", (long)input->last_rcl_error);
+    set_key_value(transport, 5, value);
+    set_key_value(transport, 6, input->firmware_version);
+    set_key_value(transport, 7, input->build_id);
+    set_key_value(transport, 8, input->idf_version);
 
     const drive_state_t zero_state = {0};
     const drive_state_t* state = input->drive_state != NULL ? input->drive_state : &zero_state;
-    const bool calibrated =
-        input->drive_state_valid && (state->faults & DRIVE_FAULT_NOT_CALIBRATED) == 0;
-    const bool encoder_ok = input->drive_state_valid && (state->faults & DRIVE_FAULT_ENCODER) == 0;
+    const bool calibrated = input->drive_state_valid && state->ready &&
+                            (state->faults & DRIVE_FAULT_NOT_CALIBRATED) == 0;
+    const bool encoder_ok = input->drive_state_valid && state->encoder_valid &&
+                            (state->faults & DRIVE_FAULT_ENCODER) == 0;
     const bool stalled = input->drive_state_valid && (state->faults & DRIVE_FAULT_STALL) != 0;
     const bool motor_ok = input->drive_state_valid && (state->faults & DRIVE_FAULT_MOTOR) == 0;
-    const bool drive_error =
-        input->drive_state_valid && (!calibrated || !encoder_ok || stalled || !motor_ok);
+    const bool drive_error = input->drive_state_valid && state->ready &&
+                             (!calibrated || !encoder_ok || stalled || !motor_ok);
     const bool drive_publish_ok = (input->local_faults & ROS_FAULT_DRIVE_PUBLISH) == 0;
+    const bool drive_data_available = input->drive_state_valid && state->ready &&
+                                      state->encoder_valid &&
+                                      (input->local_faults & ROS_FAULT_DRIVE_DATA) == 0;
 
     diagnostic_msgs__msg__DiagnosticStatus* drive = &diagnostic->status.data[DIAGNOSTIC_DRIVE];
-    drive->level = !input->drive_state_valid ? diagnostic_msgs__msg__DiagnosticStatus__STALE
+    drive->level = !drive_data_available ? diagnostic_msgs__msg__DiagnosticStatus__STALE
                    : drive_error
                        ? diagnostic_msgs__msg__DiagnosticStatus__ERROR
                        : (!drive_publish_ok || (state->faults & DRIVE_FAULT_COMMAND_TIMEOUT) != 0
                               ? diagnostic_msgs__msg__DiagnosticStatus__WARN
                               : diagnostic_msgs__msg__DiagnosticStatus__OK);
-    string_write(&drive->message, !input->drive_state_valid ? "drive state unavailable"
-                                  : drive_error             ? "drive unavailable"
-                                  : !drive_publish_ok       ? "drive state publish failed"
+    string_write(&drive->message, !drive_data_available ? "drive state unavailable"
+                                  : drive_error         ? "drive unavailable"
+                                  : !drive_publish_ok   ? "drive state publish failed"
                                   : drive->level == diagnostic_msgs__msg__DiagnosticStatus__WARN
                                       ? "command timeout"
                                       : "ready");
     set_bool_value(drive, 0, calibrated);
     set_bool_value(drive, 1, state->command_active);
-    char value[DIAGNOSTIC_VALUE_CAPACITY + 1];
     snprintf(value, sizeof(value), "%lld", (long long)input->command_age_ms);
     set_key_value(drive, 2, value);
     set_bool_value(drive, 3, encoder_ok);
@@ -160,22 +168,48 @@ void ros_diagnostics_update(diagnostic_msgs__msg__DiagnosticArray* diagnostic,
     set_bool_value(drive, 5, motor_ok);
     snprintf(value, sizeof(value), "0x%08lx", (unsigned long)(state->faults | input->local_faults));
     set_key_value(drive, 6, value);
+    set_bool_value(drive, 7, state->ready);
+    snprintf(value, sizeof(value), "%lld", (long long)input->drive_age_ms);
+    set_key_value(drive, 8, value);
 
-    const bool imu_ok = (input->local_faults & ROS_FAULT_IMU_READ) == 0;
+    const imu_snapshot_t empty_imu = {0};
+    const imu_snapshot_t* imu_snapshot =
+        input->imu_snapshot != NULL ? input->imu_snapshot : &empty_imu;
+    const bool imu_ok = imu_snapshot->valid && (input->local_faults & ROS_FAULT_IMU_READ) == 0;
     const bool imu_publish_ok = (input->local_faults & ROS_FAULT_IMU_PUBLISH) == 0;
+    const bool imu_stale = imu_snapshot->last_success_us > 0 && input->imu_age_ms >= 0;
+    const bool calibration_failed = imu_snapshot->state == IMU_STATE_RECOVERING &&
+                                    imu_snapshot->last_error == ESP_ERR_INVALID_STATE;
+    const char* imu_message = imu_snapshot->state == IMU_STATE_INITIALIZING  ? "IMU initializing"
+                              : imu_snapshot->state == IMU_STATE_CALIBRATING ? "IMU calibrating"
+                              : calibration_failed ? "IMU calibration failed"
+                              : imu_snapshot->state == IMU_STATE_RECOVERING ? "IMU recovering"
+                              : imu_stale && !imu_ok                        ? "IMU sample stale"
+                              : !imu_ok         ? "IMU sample unavailable"
+                              : !imu_publish_ok ? "IMU publish failed"
+                                                : "ready";
     diagnostic_msgs__msg__DiagnosticStatus* imu = &diagnostic->status.data[DIAGNOSTIC_IMU];
-    imu->level = imu_ok && input->imu_calibrated && imu_publish_ok
+    imu->level = imu_ok && imu_snapshot->calibrated && imu_publish_ok
                      ? diagnostic_msgs__msg__DiagnosticStatus__OK
                      : diagnostic_msgs__msg__DiagnosticStatus__WARN;
-    string_write(&imu->message, !imu_ok                  ? "IMU sample unavailable"
-                                : !input->imu_calibrated ? "IMU not calibrated"
-                                : !imu_publish_ok        ? "IMU publish failed"
-                                                         : "ready");
+    string_write(&imu->message, imu_message);
     set_bool_value(imu, 0, imu_ok);
-    set_bool_value(imu, 1, input->imu_calibrated);
-    set_key_value(imu, 2,
-                  !imu_ok                  ? "sample unavailable"
-                  : !input->imu_calibrated ? "stationary calibration incomplete"
-                  : !imu_publish_ok        ? "ROS publisher failure"
-                                           : "none");
+    set_bool_value(imu, 1, imu_snapshot->calibrated);
+    if (imu_snapshot->last_error != ESP_OK)
+    {
+        snprintf(value, sizeof(value), "%s (0x%lx)", esp_err_to_name(imu_snapshot->last_error),
+                 (unsigned long)imu_snapshot->last_error);
+        set_key_value(imu, 2, value);
+    }
+    else
+    {
+        set_key_value(imu, 2,
+                      !imu_ok                     ? "sample unavailable"
+                      : !imu_snapshot->calibrated ? "calibration incomplete"
+                      : !imu_publish_ok           ? "ROS publisher failure"
+                                                  : "none");
+    }
+    set_key_value(imu, 3, imu_state_name(imu_snapshot->state));
+    snprintf(value, sizeof(value), "%lld", (long long)input->imu_age_ms);
+    set_key_value(imu, 4, value);
 }
