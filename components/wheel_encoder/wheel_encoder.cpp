@@ -22,7 +22,7 @@ struct EncoderRuntime
     int64_t last_sample_us;
 };
 
-EncoderRuntime encoders[WHEEL_ENCODER_SIDE_COUNT]{};
+EncoderRuntime encoders[WHEEL_ENCODER_COUNT]{};
 uint32_t encoder_cpr;
 bool initialized;
 
@@ -32,7 +32,7 @@ bool valid_config(const wheel_encoder_config_t* config)
     {
         return false;
     }
-    for (size_t i = 0; i < WHEEL_ENCODER_SIDE_COUNT; ++i)
+    for (size_t i = 0; i < WHEEL_ENCODER_COUNT; ++i)
     {
         const auto& channel = config->channels[i];
         if (!GPIO_IS_VALID_GPIO(channel.a_gpio) || !GPIO_IS_VALID_GPIO(channel.b_gpio) ||
@@ -96,7 +96,7 @@ esp_err_t wheel_encoder_init(const wheel_encoder_config_t* config)
     }
 
     std::memset(encoders, 0, sizeof(encoders));
-    for (size_t i = 0; i < WHEEL_ENCODER_SIDE_COUNT; ++i)
+    for (size_t i = 0; i < WHEEL_ENCODER_COUNT; ++i)
     {
         espp::AbiEncoder<>::Config driver_config{};
         driver_config.a_gpio = config->channels[i].a_gpio;
@@ -128,14 +128,14 @@ esp_err_t wheel_encoder_sample(wheel_encoder_id_t id, wheel_encoder_sample_t* sa
     {
         return ESP_ERR_INVALID_STATE;
     }
-    if (static_cast<unsigned>(id) >= WHEEL_ENCODER_SIDE_COUNT || sample == nullptr)
+    if (static_cast<unsigned>(id) >= WHEEL_ENCODER_COUNT || sample == nullptr)
     {
         return ESP_ERR_INVALID_ARG;
     }
     return sample_one(encoders[id], sample, esp_timer_get_time());
 }
 
-esp_err_t wheel_encoder_sample_all(wheel_encoder_sample_t samples[WHEEL_ENCODER_SIDE_COUNT])
+esp_err_t wheel_encoder_sample_all(wheel_encoder_sample_t samples[WHEEL_ENCODER_COUNT])
 {
     if (samples == nullptr)
     {
@@ -146,7 +146,7 @@ esp_err_t wheel_encoder_sample_all(wheel_encoder_sample_t samples[WHEEL_ENCODER_
         return ESP_ERR_INVALID_STATE;
     }
     const int64_t now = esp_timer_get_time();
-    for (size_t i = 0; i < WHEEL_ENCODER_SIDE_COUNT; ++i)
+    for (size_t i = 0; i < WHEEL_ENCODER_COUNT; ++i)
     {
         const esp_err_t result = sample_one(encoders[i], &samples[i], now);
         if (result != ESP_OK)

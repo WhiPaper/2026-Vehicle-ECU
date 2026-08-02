@@ -14,7 +14,7 @@
 | --- | --- | --- |
 | 4채널 L9110S 출력 | `espressif/bdc_motor` 0.2.1 | `motor`의 4모터 자원 배치, 방향 반전, 시동 부스트, tank mixing과 안전 정지 |
 | MPU6050 | ESP-IDF `i2c_master` 직접 사용 | 유한 transaction timeout, 독립 취득 태스크, SI 단위 변환, 정지 보정과 복구 |
-| 좌·우 quadrature 엔코더 | `espp/encoder` 1.1.6 | `wheel_encoder`의 C API, 좌우 반전, 표본간 delta, RPM과 timestamp |
+| FL/FR/RL/RR quadrature 엔코더 | `espp/encoder` 1.1.6 | `wheel_encoder`의 C API, 바퀴별 반전, 표본간 delta, RPM과 timestamp |
 | micro-ROS | Git commit 고정 | Registry 패키지가 없어 upstream ESP-IDF 컴포넌트를 Component Manager의 Git 의존성으로 사용 |
 
 기존 로컬 `motor_hw`, `mpu6050`, `encoder` 저수준 드라이버는 제거했다.

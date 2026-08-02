@@ -17,7 +17,7 @@ Raspberry Pi 5의 ROS 2 Jazzy 시스템이 상위 제어와 센서 융합을 담
 ## 주요 기능
 
 - 4채널 L9110S 모터 출력과 좌우 skid-steer 제어
-- Registry PCNT 드라이버 기반 좌·우 quadrature 엔코더
+- Registry PCNT 드라이버 기반 FL/FR/RL/RR quadrature 엔코더
 - 유한-timeout ESP-IDF I2C 기반 MPU6050 측정과 정지 바이어스 보정
 - 엔코더 PID 속도 제어, odometry, 명령·stall fail-safe
 - Raspberry Pi 5와 USB-UART 기반 micro-ROS 통신

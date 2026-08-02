@@ -48,28 +48,52 @@ menu "Board"
         bool "Invert rear-right motor direction"
         default y
 
-    config ENCODER_LEFT_A_GPIO
-        int "Left encoder A GPIO"
+    config ENCODER_FRONT_LEFT_A_GPIO
+        int "Front-left encoder A GPIO"
         range 0 39
 
-    config ENCODER_LEFT_B_GPIO
-        int "Left encoder B GPIO"
+    config ENCODER_FRONT_LEFT_B_GPIO
+        int "Front-left encoder B GPIO"
         range 0 39
 
-    config ENCODER_LEFT_INVERTED
-        bool "Invert left encoder direction"
+    config ENCODER_FRONT_LEFT_INVERTED
+        bool "Invert front-left encoder direction"
         default n
 
-    config ENCODER_RIGHT_A_GPIO
-        int "Right encoder A GPIO"
+    config ENCODER_FRONT_RIGHT_A_GPIO
+        int "Front-right encoder A GPIO"
         range 0 39
 
-    config ENCODER_RIGHT_B_GPIO
-        int "Right encoder B GPIO"
+    config ENCODER_FRONT_RIGHT_B_GPIO
+        int "Front-right encoder B GPIO"
         range 0 39
 
-    config ENCODER_RIGHT_INVERTED
-        bool "Invert right encoder direction"
+    config ENCODER_FRONT_RIGHT_INVERTED
+        bool "Invert front-right encoder direction"
+        default y
+
+    config ENCODER_REAR_LEFT_A_GPIO
+        int "Rear-left encoder A GPIO"
+        range 0 39
+
+    config ENCODER_REAR_LEFT_B_GPIO
+        int "Rear-left encoder B GPIO"
+        range 0 39
+
+    config ENCODER_REAR_LEFT_INVERTED
+        bool "Invert rear-left encoder direction"
+        default n
+
+    config ENCODER_REAR_RIGHT_A_GPIO
+        int "Rear-right encoder A GPIO"
+        range 0 39
+
+    config ENCODER_REAR_RIGHT_B_GPIO
+        int "Rear-right encoder B GPIO"
+        range 0 39
+
+    config ENCODER_REAR_RIGHT_INVERTED
+        bool "Invert rear-right encoder direction"
         default y
 
     config ENCODER_CPR

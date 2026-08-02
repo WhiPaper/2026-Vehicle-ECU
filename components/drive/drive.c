@@ -30,7 +30,7 @@ static drive_mailbox_t s_mailbox;
 static portMUX_TYPE s_shared_lock = portMUX_INITIALIZER_UNLOCKED;
 static TaskHandle_t s_task;
 static int64_t s_command_deadline_us;
-static int64_t s_last_motion_us[2];
+static int64_t s_last_motion_us[WHEEL_ENCODER_COUNT];
 static uint32_t s_external_faults;
 static bool s_initialized;
 
@@ -77,7 +77,12 @@ static int64_t stall_timeout_us(float target_rpm)
                                             s_config.stall_timeout_ms);
 }
 
-static void update_odometry(const wheel_encoder_sample_t encoders[2], float dt_s)
+static size_t encoder_side(size_t encoder)
+{
+    return (encoder == WHEEL_ENCODER_FRONT_LEFT || encoder == WHEEL_ENCODER_REAR_LEFT) ? 0 : 1;
+}
+
+static void update_odometry(float left_rpm, float right_rpm, float dt_s)
 {
     if (s_config.wheel_radius_m <= 0 || s_config.track_width_m <= 0)
     {
@@ -86,8 +91,8 @@ static void update_odometry(const wheel_encoder_sample_t encoders[2], float dt_s
         return;
     }
 
-    const float left_omega = encoders[0].rpm * RPM_TO_RAD_PER_SEC;
-    const float right_omega = encoders[1].rpm * RPM_TO_RAD_PER_SEC;
+    const float left_omega = left_rpm * RPM_TO_RAD_PER_SEC;
+    const float right_omega = right_rpm * RPM_TO_RAD_PER_SEC;
     const float left_velocity = left_omega * s_config.wheel_radius_m;
     const float right_velocity = right_omega * s_config.wheel_radius_m;
     const float linear = (left_velocity + right_velocity) * 0.5f;
@@ -141,8 +146,10 @@ static void apply_command(const drive_command_t* command)
     }
     else
     {
-        s_last_motion_us[0] = now;
-        s_last_motion_us[1] = now;
+        for (size_t i = 0; i < WHEEL_ENCODER_COUNT; ++i)
+        {
+            s_last_motion_us[i] = now;
+        }
     }
 }
 
@@ -187,7 +194,7 @@ static void drive_task(void* argument)
             stop_state(reported_faults);
         }
 
-        wheel_encoder_sample_t encoders[2];
+        wheel_encoder_sample_t encoders[WHEEL_ENCODER_COUNT];
         const esp_err_t encoder_result = wheel_encoder_sample_all(encoders);
         if (encoder_result != ESP_OK)
         {
@@ -206,21 +213,40 @@ static void drive_task(void* argument)
         s_state.ready = true;
         s_state.encoder_valid = true;
         s_state.faults &= ~DRIVE_FAULT_ENCODER;
-        for (size_t i = 0; i < 2; ++i)
+        for (size_t i = 0; i < WHEEL_ENCODER_COUNT; ++i)
         {
-            s_state.measured_rpm[i] = encoders[i].rpm;
-            s_state.encoder_count[i] = encoders[i].count;
-            if (wheel_encoder_cpr() > 0)
-            {
-                s_state.wheel_position_rad[i] =
-                    (float)encoders[i].count * TWO_PI / (float)wheel_encoder_cpr();
-            }
-            if (encoders[i].delta_count != 0 || fabsf(s_state.target_rpm[i]) < STALL_MIN_TARGET_RPM)
+            const size_t side = encoder_side(i);
+            if (encoders[i].delta_count != 0 ||
+                fabsf(s_state.target_rpm[side]) < STALL_MIN_TARGET_RPM)
             {
                 s_last_motion_us[i] = now;
             }
         }
-        update_odometry(encoders, dt_s);
+        s_state.measured_rpm[0] =
+            (encoders[WHEEL_ENCODER_FRONT_LEFT].rpm +
+             encoders[WHEEL_ENCODER_REAR_LEFT].rpm) *
+            0.5f;
+        s_state.measured_rpm[1] =
+            (encoders[WHEEL_ENCODER_FRONT_RIGHT].rpm +
+             encoders[WHEEL_ENCODER_REAR_RIGHT].rpm) *
+            0.5f;
+        s_state.encoder_count[0] =
+            (encoders[WHEEL_ENCODER_FRONT_LEFT].count +
+             encoders[WHEEL_ENCODER_REAR_LEFT].count) /
+            2;
+        s_state.encoder_count[1] =
+            (encoders[WHEEL_ENCODER_FRONT_RIGHT].count +
+             encoders[WHEEL_ENCODER_REAR_RIGHT].count) /
+            2;
+        if (wheel_encoder_cpr() > 0)
+        {
+            for (size_t side = 0; side < 2; ++side)
+            {
+                s_state.wheel_position_rad[side] =
+                    (float)s_state.encoder_count[side] * TWO_PI / (float)wheel_encoder_cpr();
+            }
+        }
+        update_odometry(s_state.measured_rpm[0], s_state.measured_rpm[1], dt_s);
         s_state.timestamp_us = now;
 
         if (s_state.command_active && now > s_command_deadline_us)
@@ -228,9 +254,15 @@ static void drive_task(void* argument)
             stop_state(DRIVE_FAULT_COMMAND_TIMEOUT);
         }
         else if (s_state.command_active &&
-                 ((now - s_last_motion_us[0] > stall_timeout_us(s_state.target_rpm[0]) &&
+                 ((((now - s_last_motion_us[WHEEL_ENCODER_FRONT_LEFT] >
+                         stall_timeout_us(s_state.target_rpm[0])) ||
+                    (now - s_last_motion_us[WHEEL_ENCODER_REAR_LEFT] >
+                         stall_timeout_us(s_state.target_rpm[0]))) &&
                    fabsf(s_state.target_rpm[0]) >= STALL_MIN_TARGET_RPM) ||
-                  (now - s_last_motion_us[1] > stall_timeout_us(s_state.target_rpm[1]) &&
+                  (((now - s_last_motion_us[WHEEL_ENCODER_FRONT_RIGHT] >
+                         stall_timeout_us(s_state.target_rpm[1])) ||
+                    (now - s_last_motion_us[WHEEL_ENCODER_REAR_RIGHT] >
+                         stall_timeout_us(s_state.target_rpm[1]))) &&
                    fabsf(s_state.target_rpm[1]) >= STALL_MIN_TARGET_RPM)))
         {
             stop_state(DRIVE_FAULT_STALL);
@@ -281,8 +313,10 @@ esp_err_t drive_init(const drive_config_t* config)
         s_state.faults = DRIVE_FAULT_NOT_CALIBRATED;
     }
     const int64_t now = esp_timer_get_time();
-    s_last_motion_us[0] = now;
-    s_last_motion_us[1] = now;
+    for (size_t i = 0; i < WHEEL_ENCODER_COUNT; ++i)
+    {
+        s_last_motion_us[i] = now;
+    }
     s_initialized = true;
     publish_snapshot();
     return ESP_OK;

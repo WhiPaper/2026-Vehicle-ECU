@@ -14,13 +14,14 @@ x4 계수이므로 다음처럼 계산하거나 직접 측정한다.
 ```
 
 바퀴에 기준선을 표시하고 정확히 10회전시킨 뒤 누적 count의 절댓값을
-10으로 나누면 오차를 줄일 수 있다. 전진으로 돌렸을 때 좌우 count가 모두
-양수여야 한다. 반대쪽만 음수이면 `ENCODER_LEFT_INVERTED` 또는
-`ENCODER_RIGHT_INVERTED`를 변경한다.
+10으로 나누면 오차를 줄일 수 있다. 전진으로 돌렸을 때 네 바퀴 count가
+모두 양수여야 한다. 특정 바퀴만 음수이면 `ENCODER_FRONT_LEFT_INVERTED`,
+`ENCODER_FRONT_RIGHT_INVERTED`, `ENCODER_REAR_LEFT_INVERTED` 또는
+`ENCODER_REAR_RIGHT_INVERTED` 중 해당 설정을 변경한다.
 
-GPIO34/35에는 내부 풀업이 없으므로 우측 엔코더가 오픈 컬렉터라면 반드시
-3.3 V 외부 풀업을 사용한다. 정지 중 count가 변하면 배선, 접지, 외부
-풀업과 `ENCODER_GLITCH_FILTER_NS`를 먼저 확인한다.
+GPIO34/35/36/39에는 내부 풀업이 없으므로 해당 엔코더가 오픈 컬렉터라면
+반드시 3.3 V 외부 풀업을 사용한다. 정지 중 count가 변하면 배선, 접지,
+외부 풀업과 `ENCODER_GLITCH_FILTER_NS`를 먼저 확인한다.
 
 ## 2. 차체 기하와 최대 RPM
 
