@@ -30,16 +30,28 @@
 #define MOTOR_REAR_RIGHT_INVERTED false
 #endif
 
-#ifdef CONFIG_ENCODER_LEFT_INVERTED
-#define ENCODER_LEFT_INVERTED true
+#ifdef CONFIG_ENCODER_FRONT_LEFT_INVERTED
+#define ENCODER_FRONT_LEFT_INVERTED true
 #else
-#define ENCODER_LEFT_INVERTED false
+#define ENCODER_FRONT_LEFT_INVERTED false
 #endif
 
-#ifdef CONFIG_ENCODER_RIGHT_INVERTED
-#define ENCODER_RIGHT_INVERTED true
+#ifdef CONFIG_ENCODER_FRONT_RIGHT_INVERTED
+#define ENCODER_FRONT_RIGHT_INVERTED true
 #else
-#define ENCODER_RIGHT_INVERTED false
+#define ENCODER_FRONT_RIGHT_INVERTED false
+#endif
+
+#ifdef CONFIG_ENCODER_REAR_LEFT_INVERTED
+#define ENCODER_REAR_LEFT_INVERTED true
+#else
+#define ENCODER_REAR_LEFT_INVERTED false
+#endif
+
+#ifdef CONFIG_ENCODER_REAR_RIGHT_INVERTED
+#define ENCODER_REAR_RIGHT_INVERTED true
+#else
+#define ENCODER_REAR_RIGHT_INVERTED false
 #endif
 
 static const motor_config_t s_motor_config = {
@@ -73,14 +85,24 @@ static const wheel_encoder_config_t s_wheel_encoder_config = {
     .channels =
         {
             {
-                .a_gpio = CONFIG_ENCODER_LEFT_A_GPIO,
-                .b_gpio = CONFIG_ENCODER_LEFT_B_GPIO,
-                .inverted = ENCODER_LEFT_INVERTED,
+                .a_gpio = CONFIG_ENCODER_FRONT_LEFT_A_GPIO,
+                .b_gpio = CONFIG_ENCODER_FRONT_LEFT_B_GPIO,
+                .inverted = ENCODER_FRONT_LEFT_INVERTED,
             },
             {
-                .a_gpio = CONFIG_ENCODER_RIGHT_A_GPIO,
-                .b_gpio = CONFIG_ENCODER_RIGHT_B_GPIO,
-                .inverted = ENCODER_RIGHT_INVERTED,
+                .a_gpio = CONFIG_ENCODER_FRONT_RIGHT_A_GPIO,
+                .b_gpio = CONFIG_ENCODER_FRONT_RIGHT_B_GPIO,
+                .inverted = ENCODER_FRONT_RIGHT_INVERTED,
+            },
+            {
+                .a_gpio = CONFIG_ENCODER_REAR_LEFT_A_GPIO,
+                .b_gpio = CONFIG_ENCODER_REAR_LEFT_B_GPIO,
+                .inverted = ENCODER_REAR_LEFT_INVERTED,
+            },
+            {
+                .a_gpio = CONFIG_ENCODER_REAR_RIGHT_A_GPIO,
+                .b_gpio = CONFIG_ENCODER_REAR_RIGHT_B_GPIO,
+                .inverted = ENCODER_REAR_RIGHT_INVERTED,
             },
         },
     .cpr = CONFIG_ENCODER_CPR,
@@ -124,7 +146,7 @@ static bool pin_is_reserved(int pin)
 
 esp_err_t board_validate(void)
 {
-    int pins[MOTOR_COUNT * 2 + WHEEL_ENCODER_SIDE_COUNT * 2 + 2];
+    int pins[MOTOR_COUNT * 2 + WHEEL_ENCODER_COUNT * 2 + 2];
     size_t pin_count = 0;
 
     for (size_t i = 0; i < MOTOR_COUNT; ++i)
@@ -141,7 +163,7 @@ esp_err_t board_validate(void)
         }
     }
 
-    for (size_t i = 0; i < WHEEL_ENCODER_SIDE_COUNT; ++i)
+    for (size_t i = 0; i < WHEEL_ENCODER_COUNT; ++i)
     {
         const int encoder_pins[] = {
             s_wheel_encoder_config.channels[i].a_gpio,
