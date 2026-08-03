@@ -23,16 +23,16 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
       - name: Restore Python tool caches
         id: formatting-cache
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v6
         with:
           path: |
             ~/.cache/pip
@@ -53,7 +53,7 @@ jobs:
         if: >-
           github.event_name != 'pull_request' &&
           steps.formatting-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v5
+        uses: actions/cache/save@v6
         with:
           path: |
             ~/.cache/pip
@@ -104,11 +104,11 @@ jobs:
             cache_key: motor-hardware
             component_cache: true
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Restore build caches
         id: build-cache
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v6
         with:
           path: |
             /root/.cache/ccache
@@ -120,7 +120,7 @@ jobs:
       - name: Restore managed components
         if: matrix.component_cache
         id: component-cache
-        uses: actions/cache/restore@v5
+        uses: actions/cache/restore@v6
         with:
           path: ${{ matrix.path }}/managed_components
           key: idf-components-v6.0.2-${{ matrix.cache_key }}-${{ hashFiles('**/dependencies.lock', 'app-colcon.meta', 'requirements-microros.txt', '**/sdkconfig.defaults', '**/CMakeLists.txt', '**/idf_component.yml') }}
@@ -187,7 +187,7 @@ jobs:
         if: >-
           github.event_name != 'pull_request' &&
           steps.build-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v5
+        uses: actions/cache/save@v6
         with:
           path: |
             /root/.cache/ccache
@@ -199,7 +199,7 @@ jobs:
           matrix.component_cache &&
           github.event_name != 'pull_request' &&
           steps.component-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v5
+        uses: actions/cache/save@v6
         with:
           path: ${{ matrix.path }}/managed_components
           key: ${{ steps.component-cache.outputs.cache-primary-key }}
@@ -234,7 +234,7 @@ jobs:
       id-token: write
     steps:
       - name: Download firmware files
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: vehicle-ecu-files-${{ github.ref_name }}
           path: firmware
