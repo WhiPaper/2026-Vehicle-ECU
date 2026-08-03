@@ -48,7 +48,7 @@ jobs:
             test "$comparison_status" = "identical"
 
       - name: Download firmware
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: vehicle-ecu-${{ github.event.workflow_run.head_branch }}
           path: firmware
